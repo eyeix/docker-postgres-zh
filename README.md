@@ -2,14 +2,28 @@
 
 这是一个基于 PostgreSQL 16 的 Docker 镜像，预装了中文全文搜索功能和相关扩展，特别适用于中文应用开发。
 
+## 🏗️ 多架构支持
+
+本镜像支持以下架构：
+
+- **linux/amd64** - Intel/AMD 64位处理器
+- **linux/arm64** - ARM 64位处理器（Apple Silicon、AWS Graviton 等）
+- **linux/386** - Intel 32位处理器
+- **linux/arm/v7** - ARM 32位处理器（树莓派等）
+- **linux/arm/v5** - ARM 32位处理器（较老的设备）
+- **linux/ppc64le** - IBM Power 64位处理器
+- **linux/s390x** - IBM Z 架构处理器
+
 ## 功能特性
 
 ### 🚀 核心功能
 
 - **PostgreSQL 16**: 基于官方 PostgreSQL 16 镜像
+- **多架构支持**: 支持 7 种不同的 CPU 架构
 - **中文分词支持**: 集成 zhparser 中文分词器
 - **全文搜索**: 支持中文全文搜索和模糊匹配
 - **扩展丰富**: 预装常用 PostgreSQL 扩展
+- **容错构建**: 智能处理不同架构的包兼容性问题
 
 ### 📦 预装扩展
 
@@ -33,7 +47,7 @@
 ### 使用 Docker 运行
 
 ```bash
-# 拉取镜像
+# 拉取镜像（Docker 会自动选择适合你平台的架构）
 docker pull riccoxie/postgres-zh:v16
 
 # 运行容器
@@ -45,6 +59,16 @@ docker run -d \
   -p 5432:5432 \
   riccoxie/postgres-zh:v16
 ```
+
+### 多架构使用
+
+本镜像支持多种架构，Docker 会自动选择适合你平台的版本：
+
+- **Intel/AMD 服务器**: 自动使用 `linux/amd64` 版本
+- **Apple Silicon Mac**: 自动使用 `linux/arm64` 版本
+- **树莓派**: 自动使用 `linux/arm/v7` 版本
+- **IBM Power 服务器**: 自动使用 `linux/ppc64le` 版本
+- **IBM Z 大型机**: 自动使用 `linux/s390x` 版本
 
 ### 使用 Docker Compose
 
@@ -183,6 +207,28 @@ docker run -it --rm \
 SET default_text_search_config = 'chinese_zh';
 SET pg_trgm.similarity_threshold = 0.3;
 ```
+
+## 架构兼容性说明
+
+### 功能可用性
+
+不同架构的功能可用性可能有所不同：
+
+| 架构 | PostgreSQL | zhparser | 其他扩展 | 状态 |
+|------|------------|----------|----------|------|
+| linux/amd64 | ✅ 完整支持 | ✅ 完整支持 | ✅ 完整支持 | 🟢 推荐 |
+| linux/arm64 | ✅ 完整支持 | ✅ 完整支持 | ✅ 完整支持 | 🟢 推荐 |
+| linux/386 | ✅ 完整支持 | ⚠️ 部分支持 | ✅ 完整支持 | 🟡 可用 |
+| linux/arm/v7 | ✅ 完整支持 | ⚠️ 部分支持 | ✅ 完整支持 | 🟡 可用 |
+| linux/arm/v5 | ✅ 完整支持 | ⚠️ 部分支持 | ✅ 完整支持 | 🟡 可用 |
+| linux/ppc64le | ✅ 完整支持 | ⚠️ 部分支持 | ✅ 完整支持 | 🟡 可用 |
+| linux/s390x | ✅ 完整支持 | ⚠️ 部分支持 | ✅ 完整支持 | 🟡 可用 |
+
+### 说明
+
+- **🟢 推荐**: 完整功能支持，最佳性能
+- **🟡 可用**: 核心功能完整，部分高级功能可能受限
+- **⚠️ 部分支持**: zhparser 在某些架构上可能无法编译，但 PostgreSQL 核心功能完全可用
 
 ## 故障排除
 
