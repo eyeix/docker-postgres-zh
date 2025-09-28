@@ -70,6 +70,47 @@ docker run -d \
 - **IBM Power 服务器**: 自动使用 `linux/ppc64le` 版本
 - **IBM Z 大型机**: 自动使用 `linux/s390x` 版本
 
+### 初始化脚本
+
+镜像默认只包含生产环境脚本：
+
+- **01-extensions.sql**: 安装扩展和配置（自动执行）
+
+### 测试和示例
+
+如需测试数据和示例，请使用项目根目录的测试脚本：
+
+- **test-examples.sql**: 测试数据和示例查询
+
+#### 使用测试脚本
+
+```bash
+# 1. 启动容器
+docker run -d \
+  --name postgres-zh \
+  -e POSTGRES_DB=zh-test \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=your_password \
+  -p 5432:5432 \
+  riccoxie/postgres-zh:v16
+
+# 2. 连接到数据库
+docker exec -it postgres-zh psql -U postgres -d zh-test
+
+# 3. 执行测试脚本
+\i test-examples.sql
+```
+
+#### 测试脚本内容
+
+测试脚本包含：
+
+- 示例表结构
+- 测试数据插入
+- 中文全文搜索示例
+- 分词功能验证
+- 扩展状态检查
+
 ### 使用 Docker Compose
 
 ```yaml

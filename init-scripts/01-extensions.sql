@@ -18,14 +18,3 @@ BEGIN
     END IF;
 END $$;
 
--- 创建测试表和索引示例
-CREATE TABLE IF NOT EXISTS articles (
-    id SERIAL PRIMARY KEY,
-    title TEXT NOT NULL,
-    content TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- 创建全文搜索索引
-CREATE INDEX IF NOT EXISTS idx_articles_fts ON articles 
-    USING gin(to_tsvector('chinese_zh', title || ' ' || content));
