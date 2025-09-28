@@ -7,13 +7,15 @@ on:
       - 'README.md'
       - 'docs/**'
       - '*.md'
+      - 'test-examples.sql'
   pull_request:
     branches: [ v16 ]
     paths-ignore:
       - 'README.md'
       - 'docs/**'
       - '*.md'
-
+      - 'test-examples.sql'
+      
 jobs:
   build:
     runs-on: ubuntu-latest
