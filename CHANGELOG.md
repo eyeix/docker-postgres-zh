@@ -1,5 +1,32 @@
 # 更新日志
 
+## 2025-09-30
+
+### 🚀 PostgreSQL 17 升级
+
+#### ✨ 版本升级
+
+- **PostgreSQL 17**: 升级到最新的 PostgreSQL 17 版本
+- **Docker 镜像标签**: 更新为 `riccoxie/postgres-zh:v17`
+- **Pig 包管理器**: 使用 `pg17` 内核和扩展
+- **向后兼容**: 保持所有现有功能和扩展支持
+
+#### 🔧 技术更新
+
+- **内核版本**: PostgreSQL 16 → PostgreSQL 17
+- **Pig 安装**: `pig ext install pg17` 替代 `pg16`
+- **软链接**: `pig ext link 17` 替代 `link 16`
+- **贡献包**: `postgresql-17-contrib` 替代 `postgresql-16-contrib`
+
+#### 📦 功能保持
+
+- **扩展支持**: 所有 30+ 个扩展继续支持 PostgreSQL 17
+- **中文处理**: zhparser 等中文分词功能完全兼容
+- **多架构**: 继续支持 linux/amd64 和 linux/arm64
+- **Pig 管理**: 扩展管理命令保持不变
+
+---
+
 ## 2025-09-29
 
 ### 🚀 重大更新：Pig 包管理器重构

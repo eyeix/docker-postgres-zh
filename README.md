@@ -1,6 +1,6 @@
 # Docker PostgreSQL 中文适配镜像
 
-这是一个基于 PostgreSQL 16 的 Docker 镜像，专门为中文应用开发优化，预装了中文分词、全文搜索、向量搜索、时间序列、地理空间等丰富扩展，提供完整的中文数据处理能力。
+这是一个基于 PostgreSQL 17 的 Docker 镜像，专门为中文应用开发优化，预装了中文分词、全文搜索、向量搜索、时间序列、地理空间等丰富扩展，提供完整的中文数据处理能力。
 
 ## 📋 目录
 
@@ -29,7 +29,7 @@
 
 ### 🚀 核心功能
 
-- **PostgreSQL 16**: 基于 Ubuntu 24.04 和 Pig 包管理器
+- **PostgreSQL 17**: 基于 Ubuntu 24.04 和 Pig 包管理器
 - **多架构支持**: 支持 2 种主要的 CPU 架构（基于 Pig 包管理器支持）
 - **中文数据处理**: 专门优化的中文分词、全文搜索和文本处理能力
 - **AI/向量支持**: 集成 pgvector、pg_similarity 等向量搜索扩展，支持中文语义搜索
@@ -62,7 +62,7 @@
 
 ```bash
 # 拉取镜像（Docker 会自动选择适合你平台的架构）
-docker pull riccoxie/postgres-zh:v16
+docker pull riccoxie/postgres-zh:v17
 
 # 运行容器
 docker run -d \
@@ -71,7 +71,7 @@ docker run -d \
   -e POSTGRES_USER=postgres \
   -e POSTGRES_PASSWORD=your_password \
   -p 5432:5432 \
-  riccoxie/postgres-zh:v16
+  riccoxie/postgres-zh:v17
 ```
 
 ### 使用 Docker Compose
@@ -80,7 +80,7 @@ docker run -d \
 version: '3.8'
 services:
   postgres:
-    image: riccoxie/postgres-zh:v16
+    image: riccoxie/postgres-zh:v17
     container_name: postgres-zh
     environment:
       POSTGRES_DB: zh-app
@@ -120,7 +120,7 @@ docker run -d \
   -e POSTGRES_USER=postgres \
   -e POSTGRES_PASSWORD=your_password \
   -p 5432:5432 \
-  riccoxie/postgres-zh:v16
+  riccoxie/postgres-zh:v17
 
 # 2. 连接到数据库
 docker exec -it postgres-zh psql -U postgres -d zh-app
@@ -322,7 +322,7 @@ docker run -d \
   --name postgres-zh \
   -e POSTGRES_PASSWORD=your_password \
   -p 5432:5432 \
-  riccoxie/postgres-zh:v16
+  riccoxie/postgres-zh:v17
 
 # 自定义用户和数据库
 docker run -d \
@@ -331,7 +331,7 @@ docker run -d \
   -e POSTGRES_DB=mydb \
   -e POSTGRES_PASSWORD=my_password \
   -p 5432:5432 \
-  riccoxie/postgres-zh:v16
+  riccoxie/postgres-zh:v17
 
 # 完全自定义配置
 docker run -d \
@@ -340,7 +340,7 @@ docker run -d \
   -e POSTGRES_DB=zh_search \
   -e POSTGRES_PASSWORD=secure_password \
   -p 5432:5432 \
-  riccoxie/postgres-zh:v16
+  riccoxie/postgres-zh:v17
 ```
 
 #### 环境变量行为说明
@@ -399,7 +399,7 @@ docker run -it --rm \
   -e POSTGRES_PASSWORD=dev_password \
   -p 5432:5432 \
   -v $(pwd)/init-scripts:/docker-entrypoint-initdb.d \
-  riccoxie/postgres-zh:v16
+  riccoxie/postgres-zh:v17
 ```
 
 ## 🚀 性能优化
@@ -477,4 +477,4 @@ SET pg_trgm.similarity_threshold = 0.3;
 
 ## 🗺️ 路线图
 
-✅ 支持 PostgreSQL 16 和中文数据处理
+✅ 支持 PostgreSQL 17 和中文数据处理

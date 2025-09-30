@@ -3,7 +3,7 @@ FROM ubuntu:24.04
 
 # 设置环境变量
 ENV DEBIAN_FRONTEND=noninteractive
-ENV POSTGRES_VERSION=16
+ENV POSTGRES_VERSION=17
 
 # 安装基础依赖包
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -23,11 +23,11 @@ RUN curl -fsSL https://repo.pigsty.io/pig | bash
 # 配置 Pig 仓库（分别添加仓库以避免冲突）
 RUN yes | pig repo add pigsty pgdg -u
 
-# 使用 Pig 安装 PostgreSQL 16 内核
-RUN pig ext install pg16 -y
+# 使用 Pig 安装 PostgreSQL 17 内核
+RUN pig ext install pg17 -y
 
 # 创建 /usr/pgsql 软链接，并写入 /etc/profile.d/pgsql.sh
-RUN pig ext link 16
+RUN pig ext link 17
 # 立即生效
 RUN . /etc/profile.d/pgsql.sh
 
@@ -90,7 +90,7 @@ RUN pig ext install pg_analytics pg_partman pg_duckdb citus tablefunc -y
 # 安装 postgresql-contrib 包（包含内置扩展）
 RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-contrib \
-    postgresql-16-contrib \
+    postgresql-17-contrib \
     && rm -rf /var/lib/apt/lists/* || echo "postgresql-contrib not available for this architecture"
 
 # 检查 postgres 用户是否存在，如果不存在则创建
