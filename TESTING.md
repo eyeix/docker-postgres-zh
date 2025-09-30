@@ -33,10 +33,10 @@ docker logs postgres-test
 docker exec postgres-test /usr/pgsql/bin/psql -U postgres -d postgres -c "\dx"
 
 # 检查中文分词配置
-docker exec postgres-test /usr/pgsql/bin/psql -U postgres -d postgres -c "\dF+ chinese_zh"
+docker exec postgres-test /usr/pgsql/bin/psql -U postgres -d postgres -c "\dF+ zhparser_zh"
 
 # 测试中文分词功能
-docker exec postgres-test /usr/pgsql/bin/psql -U postgres -d postgres -c "SELECT to_tsvector('chinese_zh', '这是一个中文分词的测试');"
+docker exec postgres-test /usr/pgsql/bin/psql -U postgres -d postgres -c "SELECT to_tsvector('zhparser_zh', '这是一个中文分词的测试');"
 ```
 
 ## 📋 完整测试脚本
@@ -120,10 +120,10 @@ echo "=== 检查已安装的扩展 ==="
 docker exec postgres-test /usr/pgsql/bin/psql -U postgres -d postgres -c "\dx"
 
 echo "=== 检查中文分词配置 ==="
-docker exec postgres-test /usr/pgsql/bin/psql -U postgres -d postgres -c "\dF+ chinese_zh"
+docker exec postgres-test /usr/pgsql/bin/psql -U postgres -d postgres -c "\dF+ zhparser_zh"
 
 echo "=== 测试中文分词功能 ==="
-docker exec postgres-test /usr/pgsql/bin/psql -U postgres -d postgres -c "SELECT to_tsvector('chinese_zh', '这是一个中文分词的测试');"
+docker exec postgres-test /usr/pgsql/bin/psql -U postgres -d postgres -c "SELECT to_tsvector('zhparser_zh', '这是一个中文分词的测试');"
 
 echo "=== 测试向量扩展 ==="
 docker exec postgres-test /usr/pgsql/bin/psql -U postgres -d postgres -c "SELECT * FROM pg_extension WHERE extname = 'vector';" 2>/dev/null || echo "向量扩展可能不可用"
@@ -180,7 +180,7 @@ CREATE TABLE IF NOT EXISTS articles (
 
 -- 创建全文搜索索引
 CREATE INDEX IF NOT EXISTS idx_articles_fts ON articles
-    USING gin(to_tsvector('chinese_zh', title || ' ' || content));
+    USING gin(to_tsvector('zhparser_zh', title || ' ' || content));
 
 -- 插入测试数据
 INSERT INTO articles (title, content) VALUES
@@ -206,14 +206,14 @@ ON CONFLICT DO NOTHING;
 
 -- 测试中文全文搜索
 SELECT title, content,
-       ts_rank(to_tsvector('chinese_zh', title || ' ' || content),
-               to_tsquery('chinese_zh', '人工智能')) as rank
+       ts_rank(to_tsvector('zhparser_zh', title || ' ' || content),
+               to_tsquery('zhparser_zh', '人工智能')) as rank
 FROM articles
-WHERE to_tsvector('chinese_zh', title || ' ' || content) @@ to_tsquery('chinese_zh', '人工智能')
+WHERE to_tsvector('zhparser_zh', title || ' ' || content) @@ to_tsquery('zhparser_zh', '人工智能')
 ORDER BY rank DESC;
 
 -- 测试分词功能
-SELECT to_tsvector('chinese_zh', '这是一个中文分词的测试') as segmented_text;
+SELECT to_tsvector('zhparser_zh', '这是一个中文分词的测试') as segmented_text;
 
 -- 显示所有可用的全文搜索配置
 SELECT cfgname, cfgparser FROM pg_ts_config WHERE cfgname LIKE '%zh%';
@@ -327,17 +327,17 @@ ORDER BY distance_km;
 
    ```sql
    -- 检查中文配置
-   \dF+ chinese_zh
+   \dF+ zhparser_zh
 
    -- 测试分词
-   SELECT to_tsvector('chinese_zh', '这是一个测试');
+   SELECT to_tsvector('zhparser_zh', '这是一个测试');
    ```
 
 3. **性能问题**
 
    ```sql
    -- 检查索引使用情况
-   EXPLAIN ANALYZE SELECT * FROM articles WHERE to_tsvector('chinese_zh', title) @@ to_tsquery('chinese_zh', '测试');
+   EXPLAIN ANALYZE SELECT * FROM articles WHERE to_tsvector('zhparser_zh', title) @@ to_tsquery('zhparser_zh', '测试');
    ```
 
 ### 日志检查

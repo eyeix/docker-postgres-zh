@@ -87,13 +87,6 @@ BEGIN
             RAISE NOTICE 'timescaledb extension not available: %', SQLERRM;
     END;
     
-    BEGIN
-        CREATE EXTENSION IF NOT EXISTS timescaledb_toolkit;
-        RAISE NOTICE 'timescaledb_toolkit extension created successfully';
-    EXCEPTION
-        WHEN OTHERS THEN
-            RAISE NOTICE 'timescaledb_toolkit extension not available: %', SQLERRM;
-    END;
 END $$;
 
 -- ===========================================
@@ -138,38 +131,23 @@ END $$;
 DO $$
 BEGIN
     BEGIN
-        CREATE EXTENSION IF NOT EXISTS vchord;
-        RAISE NOTICE 'vchord extension created successfully';
+        -- 检查 vchord 是否已在 shared_preload_libraries 中配置
+        IF EXISTS (SELECT 1 FROM pg_settings WHERE name = 'shared_preload_libraries' AND setting LIKE '%vchord%') THEN
+            CREATE EXTENSION IF NOT EXISTS vchord;
+            RAISE NOTICE 'vchord extension created successfully';
+        ELSE
+            RAISE NOTICE 'vchord extension not available: vchord must be loaded via shared_preload_libraries';
+        END IF;
     EXCEPTION
         WHEN OTHERS THEN
             RAISE NOTICE 'vchord extension not available: %', SQLERRM;
     END;
     
-    BEGIN
-        CREATE EXTENSION IF NOT EXISTS vectorize CASCADE;
-        RAISE NOTICE 'vectorize extension created successfully';
-    EXCEPTION
-        WHEN OTHERS THEN
-            RAISE NOTICE 'vectorize extension not available: %', SQLERRM;
-    END;
 END $$;
 
--- ===========================================
--- 14. AI/向量 BM25 扩展（依赖 vchord + vector）
--- ===========================================
-DO $$
-BEGIN
-    BEGIN
-        CREATE EXTENSION IF NOT EXISTS vchord_bm25;
-        RAISE NOTICE 'vchord_bm25 extension created successfully';
-    EXCEPTION
-        WHEN OTHERS THEN
-            RAISE NOTICE 'vchord_bm25 extension not available: %', SQLERRM;
-    END;
-END $$;
 
 -- ===========================================
--- 15. 高级全文搜索扩展（容错处理）
+-- 14. 高级全文搜索扩展（容错处理）
 -- ===========================================
 DO $$
 BEGIN
@@ -183,7 +161,7 @@ BEGIN
 END $$;
 
 -- ===========================================
--- 16. 中文分词扩展（容错处理）
+-- 15. 中文分词扩展（容错处理）
 -- ===========================================
 DO $$
 BEGIN
@@ -205,7 +183,7 @@ BEGIN
 END $$;
 
 -- ===========================================
--- 17. 分析能力扩展（无依赖）
+-- 16. 分析能力扩展（无依赖）
 -- ===========================================
 CREATE EXTENSION IF NOT EXISTS pg_analytics;
 CREATE EXTENSION IF NOT EXISTS pg_partman;
@@ -214,7 +192,7 @@ CREATE EXTENSION IF NOT EXISTS citus;
 CREATE EXTENSION IF NOT EXISTS tablefunc;
 
 -- ===========================================
--- 18. 显示已安装的扩展信息
+-- 17. 显示已安装的扩展信息
 -- ===========================================
 DO $$
 DECLARE

@@ -21,7 +21,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN curl -fsSL https://repo.pigsty.io/pig | bash
 
 # 配置 Pig 仓库（分别添加仓库以避免冲突）
-RUN yes | pig repo add pigsty pgdg -u
+RUN yes | pig repo add pgsql -u
 
 # 使用 Pig 安装 PostgreSQL 17 内核
 RUN pig ext install pg17 -y
@@ -30,6 +30,23 @@ RUN pig ext install pg17 -y
 RUN pig ext link 17
 # 立即生效
 RUN . /etc/profile.d/pgsql.sh
+
+# 检查 postgres 用户是否存在，如果不存在则创建
+RUN if ! id postgres >/dev/null 2>&1; then \
+        groupadd -r postgres --gid=999 && useradd -r -g postgres --uid=999 postgres; \
+    fi
+
+# 创建 PostgreSQL 数据目录
+RUN mkdir -p /var/lib/postgresql/data && chown -R postgres:postgres /var/lib/postgresql
+
+# ===========================================
+# 安装 PostgreSQL 内置扩展包
+# ===========================================
+# 安装 postgresql-contrib 包（包含内置扩展）
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    postgresql-contrib \
+    postgresql-17-contrib \
+    && rm -rf /var/lib/apt/lists/* || echo "postgresql-contrib not available for this architecture"
 
 # ===========================================
 # PostgreSQL 扩展安装（按功能分类和依赖顺序）
@@ -62,44 +79,21 @@ RUN pig ext install postgis geoip -y
 # 9. 时间序列扩展（timescaledb 必须先安装）
 RUN pig ext install timescaledb -y
 
-# 10. 时间序列工具扩展（依赖 timescaledb）
-RUN pig ext install timescaledb_toolkit -y
-
-# 11. AI/向量基础扩展（vector 必须先安装）
+# 10. AI/向量基础扩展（vector 必须先安装）
 RUN pig ext install pgvector -y
 
-# 12. AI/向量相似度扩展（依赖 vector）
+# 11. AI/向量相似度扩展（依赖 vector）
 RUN pig ext install pg_similarity smlar -y
 
-# 13. AI/向量高级扩展（依赖 vector）
-RUN pig ext install vectorize vchord -y
+# 12. AI/向量高级扩展（依赖 vector）
+RUN pig ext install vchord -y
 
-# 14. AI/向量 BM25 扩展（依赖 vchord + vector）
-RUN pig ext install vchord_bm25 -y
-
-# 15. 高级全文搜索扩展（无依赖）
+# 13. 高级全文搜索扩展（无依赖）
 RUN pig ext install pgroonga pg_search pg_tokenizer zhparser -y
 
-# 16. 分析能力扩展（无依赖）
+# 14. 分析能力扩展（无依赖）
 RUN pig ext install pg_analytics pg_partman pg_duckdb citus tablefunc -y
 
-
-# ===========================================
-# 安装 PostgreSQL 内置扩展包
-# ===========================================
-# 安装 postgresql-contrib 包（包含内置扩展）
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    postgresql-contrib \
-    postgresql-17-contrib \
-    && rm -rf /var/lib/apt/lists/* || echo "postgresql-contrib not available for this architecture"
-
-# 检查 postgres 用户是否存在，如果不存在则创建
-RUN if ! id postgres >/dev/null 2>&1; then \
-        groupadd -r postgres --gid=999 && useradd -r -g postgres --uid=999 postgres; \
-    fi
-
-# 创建 PostgreSQL 数据目录
-RUN mkdir -p /var/lib/postgresql/data && chown -R postgres:postgres /var/lib/postgresql
 
 # 复制初始化脚本到容器中
 COPY init-scripts/ /docker-entrypoint-initdb.d/
@@ -151,7 +145,7 @@ if [ ! -s "$PGDATA/PG_VERSION" ]; then\n\
     echo "listen_addresses = '\''*'\''" >> $PGDATA/postgresql.conf\n\
     \n\
     # 配置预加载扩展\n\
-    echo "shared_preload_libraries = '\''timescaledb,citus,pg_search,pg_tokenizer,pg_duckdb'\''" >> $PGDATA/postgresql.conf\n\
+    echo "shared_preload_libraries = '\''timescaledb,citus,pg_search,pg_tokenizer,pg_duckdb,vchord'\''" >> $PGDATA/postgresql.conf\n\
     \n\
     echo "=== 启动 PostgreSQL 进行初始化 ==="\n\
     # 启动 PostgreSQL 进行初始化\n\

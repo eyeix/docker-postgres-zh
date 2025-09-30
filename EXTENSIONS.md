@@ -53,37 +53,28 @@
 
 - **timescaledb** - 时间序列数据库（基础）
 
-### 11. 时间序列工具扩展（依赖 timescaledb）
-
-- **timescaledb_toolkit** - 时间序列分析工具
-
-### 12. AI/向量基础扩展
+### 11. AI/向量基础扩展
 
 - **vector** - 向量数据类型（基础）
 
-### 13. AI/向量相似度扩展（依赖 vector）
+### 12. AI/向量相似度扩展（依赖 vector）
 
 - **pg_similarity** - 相似度计算
 - **smlar** - 相似度匹配
 
-### 14. AI/向量高级扩展（依赖 vector）
+### 13. AI/向量高级扩展（依赖 vector）
 
 - **vchord** - 向量和弦搜索（依赖 vector）
-- **vectorize** - 向量化处理
 
-### 15. AI/向量 BM25 扩展（依赖 vchord + vector）
-
-- **vchord_bm25** - BM25 算法实现
-
-### 16. 高级全文搜索扩展（无依赖）
+### 14. 高级全文搜索扩展（无依赖）
 
 - **pgroonga** - 全文搜索引擎
 
-### 17. 中文分词扩展（无依赖）
+### 15. 中文分词扩展（无依赖）
 
 - **zhparser** - 中文分词器
 
-### 18. 分析能力扩展（无依赖）
+### 16. 分析能力扩展（无依赖）
 
 - **pg_analytics** - 分析功能
 - **pg_partman** - 分区管理
@@ -108,16 +99,13 @@
 └── postgis (独立)
 
 时间序列扩展
-├── timescaledb (基础)
-    └── timescaledb_toolkit (依赖 timescaledb)
+└── timescaledb (基础)
 
 AI/向量扩展
 ├── vector (基础)
 │   ├── pg_similarity (依赖 vector)
 │   ├── smlar (依赖 vector)
-│   ├── vchord (依赖 vector)
-│   │   └── vchord_bm25 (依赖 vchord + vector)
-│   └── vectorize (依赖 vector)
+│   └── vchord (依赖 vector)
 
 高级扩展
 ├── pgroonga (独立)
@@ -138,13 +126,11 @@ AI/向量扩展
 7. **地理位置基础扩展** → ip4r 必须先安装
 8. **地理位置扩展** → 依赖 ip4r
 9. **时间序列扩展** → timescaledb 必须先安装
-10. **时间序列工具扩展** → 依赖 timescaledb
-11. **AI/向量基础扩展** → vector 必须先安装
-12. **AI/向量相似度扩展** → 依赖 vector
-13. **AI/向量高级扩展** → 依赖 vector
-14. **AI/向量 BM25 扩展** → 依赖 vchord + vector
-15. **高级全文搜索扩展** → 无依赖
-16. **分析能力扩展** → 无依赖
+10. **AI/向量基础扩展** → vector 必须先安装
+11. **AI/向量相似度扩展** → 依赖 vector
+12. **AI/向量高级扩展** → 依赖 vector
+13. **高级全文搜索扩展** → 无依赖
+14. **分析能力扩展** → 无依赖
 
 ### 初始化脚本中的启用顺序
 
@@ -169,7 +155,6 @@ AI/向量扩展
 - pg_search
 - pg_tokenizer
 - pg_duckdb
-- pg_cron
 
 ### 中文全文搜索配置
 

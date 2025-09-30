@@ -47,9 +47,9 @@
 #### 主要扩展类别
 
 - **中文分词**: zhparser（基于 SCWS 的中文分词器）
-- **全文搜索**: pg_trgm、pg_bigm、pgroonga、vchord_bm25 等
+- **全文搜索**: pg_trgm、pg_bigm、pgroonga 等
 - **AI/向量**: pgvector、pg_similarity、smlar、vchord 等
-- **时间序列**: timescaledb、timescaledb_toolkit
+- **时间序列**: timescaledb
 - **地理空间**: postgis、geoip
 - **数据分析**: pg_analytics、pg_duckdb、citus、tablefunc
 - **功能增强**: pg_jsonschema、pg_graphql、pg_auditor 等
