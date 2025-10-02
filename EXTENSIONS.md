@@ -27,7 +27,7 @@
 
 ### 6. 全文搜索基础扩展（无依赖）
 
-- **pg_trgm** - 三元组相似度搜索
+- **pg_trgm** - 三元组相似度搜索（⚠️ 对中文文本支持有限，建议使用 zhparser 进行中文搜索）
 - **fuzzystrmatch** - 模糊字符串匹配
 - **unaccent** - 去除重音符号
 
@@ -57,7 +57,12 @@
 
 ### 13. 高级全文搜索扩展（无依赖）
 
-- **pgroonga** - 全文搜索引擎
+- **pgroonga** - 基于 Groonga 的高性能全文搜索引擎
+  - 原生支持中文、日文等多字节字符
+  - 提供比传统 PostgreSQL 全文搜索更快的性能
+  - 支持前缀搜索、模糊搜索、正则表达式等高级功能
+  - 内置搜索结果高亮功能
+  - 实时索引更新，无需重建
 
 ### 14. 中文分词扩展（无依赖）
 
@@ -140,6 +145,8 @@ AI/向量扩展
 
 ### 中文全文搜索配置
 
+#### zhparser 配置
+
 如果 zhparser 扩展可用，会自动创建 `zhparser_zh` 全文搜索配置，支持以下中文词性：
 
 - n (名词)
@@ -150,6 +157,45 @@ AI/向量扩展
 - l (习用语)
 - j (简称)
 - t (时间词)
+
+#### PGroonga 配置
+
+PGroonga 扩展无需额外配置即可使用，主要特性：
+
+- **自动分词**：自动处理中文、日文等多字节字符
+- **多种操作符**：
+  - `&@~`：全文搜索（支持布尔查询）
+  - `&^~`：前缀搜索
+  - `&@*`：相似度搜索
+  - `&@~|`：OR 搜索
+- **内置函数**：
+  - `pgroonga_score(tableoid, ctid)`：计算相关性得分
+    - `tableoid`：表对象 ID（PostgreSQL 系统列）
+    - `ctid`：行物理位置（PostgreSQL 系统列，格式如 `(0,1)`）
+    - 返回值：分数越高表示匹配度越好，用于结果排序
+    - 注意：只能在包含 PGroonga 搜索条件的查询中使用
+  - `pgroonga_highlight_html(text, keywords[])`：HTML 高亮显示搜索关键词
+  - `pgroonga_query_extract_keywords(query)`：从查询中提取搜索关键词
+- **索引类型**：支持 GIN 和 GiST 索引
+
+**使用示例：**
+
+```sql
+-- 创建索引
+CREATE INDEX idx_search ON articles USING pgroonga ((ARRAY[title, content]));
+
+-- 基本搜索（带评分）
+SELECT title, pgroonga_score(tableoid, ctid) as score
+FROM articles
+WHERE ARRAY[title, content] &@~ '搜索词'
+ORDER BY score DESC;
+
+-- 搜索结果高亮
+SELECT title, 
+       pgroonga_highlight_html(content, pgroonga_query_extract_keywords('搜索词'))
+FROM articles
+WHERE ARRAY[title, content] &@~ '搜索词';
+```
 
 ## 🔧 故障排除
 

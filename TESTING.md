@@ -201,7 +201,7 @@ INSERT INTO articles (title, content) VALUES
 ('中文分词技术', '中文分词是自然语言处理的重要技术，zhparser 提供了优秀的中文分词功能。')
 ON CONFLICT DO NOTHING;
 
--- 测试中文全文搜索
+-- 测试中文全文搜索（zhparser）
 SELECT title, content,
        ts_rank(to_tsvector('zhparser_zh', title || ' ' || content),
                to_tsquery('zhparser_zh', '人工智能')) as rank
@@ -218,12 +218,223 @@ SELECT cfgname, cfgparser FROM pg_ts_config WHERE cfgname LIKE '%zh%';
 -- 显示已安装的扩展
 SELECT extname, extversion FROM pg_extension;
 
--- 使用 pg_trgm 进行模糊搜索
+-- 使用 pg_trgm 进行模糊搜索（改进版本）
+-- 注意：pg_trgm 对中文文本的默认阈值可能过高，需要调整
+
+-- 方法1: 降低相似度阈值
+SET pg_trgm.similarity_threshold = 0.1;
 SELECT title, content, similarity(title, '人工智能') as sim
 FROM articles
 WHERE title % '人工智能' OR content % '人工智能'
 ORDER BY sim DESC;
+
+-- 方法2: 使用显式相似度比较（推荐）
+SELECT title, content, 
+       similarity(title, '人工智能') as title_sim,
+       similarity(content, '人工智能') as content_sim,
+       GREATEST(similarity(title, '人工智能'), similarity(content, '人工智能')) as max_sim
+FROM articles
+WHERE similarity(title, '人工智能') > 0.1 OR similarity(content, '人工智能') > 0.1
+ORDER BY max_sim DESC;
+
+-- 方法3: 部分匹配搜索
+SELECT title, content,
+       similarity(title, '人工') as sim_人工,
+       similarity(title, '智能') as sim_智能,
+       similarity(content, '人工') as content_sim_人工,
+       similarity(content, '智能') as content_sim_智能
+FROM articles
+WHERE similarity(title, '人工') > 0.1 OR similarity(title, '智能') > 0.1 
+   OR similarity(content, '人工') > 0.1 OR similarity(content, '智能') > 0.1
+ORDER BY GREATEST(
+    COALESCE(similarity(title, '人工'), 0),
+    COALESCE(similarity(title, '智能'), 0),
+    COALESCE(similarity(content, '人工'), 0),
+    COALESCE(similarity(content, '智能'), 0)
+) DESC;
+
+-- 恢复默认阈值
+SET pg_trgm.similarity_threshold = 0.3;
 ```
+
+### PGroonga 高性能中文搜索测试
+
+```sql
+-- ========================================
+-- PGroonga 扩展说明
+-- ========================================
+-- pgroonga_score(tableoid, ctid) 函数说明：
+--   用途：计算搜索结果与查询条件的相关性评分
+--   参数：
+--     - tableoid: 表对象ID（PostgreSQL 系统列，每个表的唯一标识）
+--     - ctid: 行物理位置（PostgreSQL 系统列，格式如 (0,1) 表示第0页第1行）
+--   返回值：相关性分数，分数越高表示匹配度越好
+--   用法：只能在包含 PGroonga 搜索条件（如 &@~）的查询中使用
+--   示例：ORDER BY pgroonga_score(tableoid, ctid) DESC  -- 按相关性降序排列
+-- ========================================
+
+-- 启用 PGroonga 扩展
+CREATE EXTENSION IF NOT EXISTS pgroonga;
+
+-- 创建测试表
+CREATE TABLE IF NOT EXISTS pgroonga_articles (
+    id SERIAL PRIMARY KEY,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    tags TEXT[],
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 创建 PGroonga 全文搜索索引
+CREATE INDEX IF NOT EXISTS idx_pgroonga_articles_search ON pgroonga_articles
+    USING pgroonga ((ARRAY[title, content]));
+
+-- 创建标签数组索引
+CREATE INDEX IF NOT EXISTS idx_pgroonga_articles_tags ON pgroonga_articles
+    USING pgroonga (tags);
+
+-- 插入测试数据
+INSERT INTO pgroonga_articles (title, content, tags) VALUES
+('深度学习框架对比', 'TensorFlow、PyTorch 和 JAX 是目前最流行的深度学习框架，各有优势', ARRAY['人工智能', '深度学习', '框架']),
+('PostgreSQL 性能调优指南', '通过合理的索引设计、查询优化和参数配置，可以显著提升数据库性能', ARRAY['数据库', '性能优化', 'PostgreSQL']),
+('自然语言处理最新进展', 'GPT、BERT 等预训练模型推动了 NLP 技术的快速发展', ARRAY['人工智能', '自然语言处理', 'NLP']),
+('分布式系统设计模式', '微服务架构、事件驱动、CQRS 等模式在现代系统中广泛应用', ARRAY['架构', '分布式系统', '设计模式']),
+('机器学习实战案例', '图像识别、语音识别、推荐系统等场景的机器学习应用实践', ARRAY['人工智能', '机器学习', '实战']),
+('全文搜索引擎技术', 'Elasticsearch、Solr 和 PGroonga 等搜索引擎的技术原理和应用', ARRAY['搜索', '全文搜索', '技术']),
+('云原生应用开发', 'Kubernetes、Docker 和微服务架构构建现代云原生应用', ARRAY['云计算', 'Kubernetes', '云原生']),
+('大数据处理技术', 'Spark、Flink 等大数据处理框架在海量数据分析中的应用', ARRAY['大数据', '数据处理', 'Spark']),
+('人工智能伦理问题', 'AI 技术发展带来的隐私、公平性和安全性等伦理挑战', ARRAY['人工智能', '伦理', '安全']),
+('数据库索引优化', 'B-tree、GIN、GiST 等索引类型的选择和优化策略', ARRAY['数据库', '索引', '优化'])
+ON CONFLICT DO NOTHING;
+
+-- ========================================
+-- PGroonga 搜索功能测试
+-- ========================================
+
+-- 1. 基本全文搜索
+SELECT title, content,
+       pgroonga_score(tableoid, ctid) as score
+FROM pgroonga_articles
+WHERE ARRAY[title, content] &@~ '人工智能'
+ORDER BY score DESC;
+
+-- 2. 多关键词搜索（AND 逻辑）
+SELECT title, content,
+       pgroonga_score(tableoid, ctid) as score
+FROM pgroonga_articles
+WHERE ARRAY[title, content] &@~ '人工智能 机器学习'
+ORDER BY score DESC;
+
+-- 3. 多关键词搜索（OR 逻辑）
+SELECT title, content,
+       pgroonga_score(tableoid, ctid) as score
+FROM pgroonga_articles
+WHERE ARRAY[title, content] &@~ '人工智能 OR 数据库'
+ORDER BY score DESC;
+
+-- 4. 前缀搜索
+SELECT title, content
+FROM pgroonga_articles
+WHERE ARRAY[title, content] &^~ '深度学习';
+
+-- 5. 模糊搜索（相似度匹配）
+SELECT title, content,
+       pgroonga_score(tableoid, ctid) as score
+FROM pgroonga_articles
+WHERE ARRAY[title, content] &@* '人工智能'
+ORDER BY score DESC;
+
+-- 6. 搜索结果高亮
+SELECT title,
+       pgroonga_highlight_html(content, pgroonga_query_extract_keywords('人工智能')) as highlighted_content,
+       pgroonga_score(tableoid, ctid) as score
+FROM pgroonga_articles
+WHERE ARRAY[title, content] &@~ '人工智能'
+ORDER BY score DESC;
+
+-- 7. 数组标签搜索
+SELECT title, tags
+FROM pgroonga_articles
+WHERE tags &@~ '人工智能';
+
+-- 8. 复杂查询（组合条件）
+SELECT title, content, tags,
+       pgroonga_score(tableoid, ctid) as score
+FROM pgroonga_articles
+WHERE (ARRAY[title, content] &@~ '人工智能 OR 机器学习')
+  AND tags && ARRAY['人工智能']
+ORDER BY score DESC;
+
+-- 9. 正则表达式搜索
+SELECT title, content
+FROM pgroonga_articles
+WHERE ARRAY[title, content] &@~ '(深度|机器)学习';
+
+-- 10. 关键词提取测试
+SELECT pgroonga_query_extract_keywords('人工智能 AND 机器学习') as keywords;
+
+-- ========================================
+-- PGroonga 性能对比测试
+-- ========================================
+
+-- 使用 EXPLAIN ANALYZE 比较不同搜索方法的性能
+
+-- PGroonga 搜索性能
+EXPLAIN ANALYZE
+SELECT title, content,
+       pgroonga_score(tableoid, ctid) as score
+FROM pgroonga_articles
+WHERE ARRAY[title, content] &@~ '人工智能'
+ORDER BY score DESC;
+
+-- 传统 LIKE 搜索性能（对比）
+EXPLAIN ANALYZE
+SELECT title, content
+FROM pgroonga_articles
+WHERE title LIKE '%人工智能%' OR content LIKE '%人工智能%';
+
+-- ========================================
+-- PGroonga 高级功能测试
+-- ========================================
+
+-- 同义词搜索（需要配置同义词字典）
+-- 注：这需要额外的 Groonga 配置，此处仅展示用法
+SELECT title, content,
+       pgroonga_score(tableoid, ctid) as score
+FROM pgroonga_articles
+WHERE ARRAY[title, content] &@~ 'AI'  -- 可以匹配"人工智能"（如果配置了同义词）
+ORDER BY score DESC;
+
+-- ========================================
+-- 清理测试数据（可选）
+-- ========================================
+-- DROP TABLE IF EXISTS pgroonga_articles;
+```
+
+**PGroonga 测试说明：**
+
+1. **基本搜索**：使用 `&@~` 操作符进行全文搜索
+2. **评分系统**：`pgroonga_score()` 函数计算相关性得分
+3. **布尔查询**：支持 AND、OR、NOT 等逻辑操作符
+4. **前缀搜索**：使用 `&^~` 操作符进行前缀匹配
+5. **模糊搜索**：使用 `&@*` 操作符进行相似度匹配
+6. **结果高亮**：`pgroonga_highlight_html()` 函数高亮搜索关键词
+7. **数组搜索**：支持对数组类型字段进行全文搜索
+8. **正则表达式**：支持复杂的正则表达式查询
+9. **性能优势**：相比传统 LIKE 查询有显著性能提升
+
+**PGroonga vs zhparser 对比：**
+
+| 特性 | PGroonga | zhparser |
+|------|----------|----------|
+| 搜索性能 | 🟢 极快 | 🟡 较快 |
+| 中文支持 | 🟢 原生支持 | 🟢 专门优化 |
+| 前缀搜索 | 🟢 支持 | 🔴 不支持 |
+| 模糊搜索 | 🟢 支持 | 🔴 不支持 |
+| 结果高亮 | 🟢 内置 | 🔴 需自行实现 |
+| 正则表达式 | 🟢 支持 | 🔴 不支持 |
+| 标准兼容性 | 🟡 自定义操作符 | 🟢 PostgreSQL 标准 |
+| 学习曲线 | 🟡 中等 | 🟢 简单 |
 
 ### 向量相似度搜索测试
 
@@ -330,7 +541,47 @@ ORDER BY distance_km;
    SELECT to_tsvector('zhparser_zh', '这是一个测试');
    ```
 
-3. **性能问题**
+3. **pg_trgm 中文搜索无结果**
+
+   **已知问题**: `pg_trgm` 对中文文本的相似度计算可能存在问题，英文文本正常但中文文本返回 0。
+
+   ```sql
+   -- 检查相似度阈值
+   SHOW pg_trgm.similarity_threshold;
+   
+   -- 降低阈值测试
+   SET pg_trgm.similarity_threshold = 0.1;
+   SELECT title, similarity(title, '人工智能') as sim
+   FROM articles WHERE similarity(title, '人工智能') > 0.1;
+   
+   -- 测试基本相似度函数
+   SELECT similarity('人工智能', '人工智能') as exact_match;
+   SELECT similarity('人工智能', '人工') as partial_match;
+   ```
+
+   **解决方案**:
+
+   ```sql
+   -- 方案1: 使用 LIKE 搜索
+   SELECT title, content
+   FROM articles
+   WHERE title LIKE '%人工智能%' OR content LIKE '%人工智能%';
+   
+   -- 方案2: 使用 zhparser 全文搜索
+   SELECT title, content,
+          ts_rank(to_tsvector('zhparser_zh', title || ' ' || content),
+                  to_tsquery('zhparser_zh', '人工智能')) as rank
+   FROM articles
+   WHERE to_tsvector('zhparser_zh', title || ' ' || content) @@ to_tsquery('zhparser_zh', '人工智能')
+   ORDER BY rank DESC;
+   
+   -- 方案3: 使用正则表达式
+   SELECT title, content
+   FROM articles
+   WHERE title ~ '人工智能' OR content ~ '人工智能';
+   ```
+
+4. **性能问题**
 
    ```sql
    -- 检查索引使用情况

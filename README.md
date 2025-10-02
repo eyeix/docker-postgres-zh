@@ -47,7 +47,7 @@
 #### 主要扩展类别
 
 - **中文分词**: zhparser（基于 SCWS 的中文分词器）
-- **全文搜索**: pg_trgm、pgroonga 等
+- **全文搜索**: zhparser（中文）、pgroonga、pg_trgm（英文）等
 - **AI/向量**: pgvector、smlar、vchord 等
 - **时间序列**: timescaledb
 - **地理空间**: postgis
@@ -164,17 +164,13 @@ INSERT INTO articles (title, content) VALUES
 ('中文分词技术', '中文分词是自然语言处理的基础技术，对搜索引擎和文本分析至关重要');
 ```
 
-#### 2. 创建全文搜索索引
+#### 2. 使用 zhparser 进行中文全文搜索
 
 ```sql
 -- 使用中文配置创建全文搜索索引
 CREATE INDEX idx_articles_fts ON articles
     USING gin(to_tsvector('zhparser_zh', title || ' ' || content));
-```
 
-#### 3. 执行中文全文搜索
-
-```sql
 -- 搜索包含"人工智能"的文章
 SELECT title, content,
        ts_rank(to_tsvector('zhparser_zh', title || ' ' || content),
@@ -189,6 +185,70 @@ FROM articles
 WHERE title % '人工智能' OR content % '人工智能'
 ORDER BY sim DESC;
 ```
+
+#### 3. 使用 PGroonga 进行高性能中文搜索
+
+PGroonga 是基于 Groonga 的高性能全文搜索扩展，特别适合处理大量中文文本。
+
+```sql
+-- 启用 PGroonga 扩展
+CREATE EXTENSION IF NOT EXISTS pgroonga;
+
+-- 创建 PGroonga 索引（GIN 索引）
+CREATE INDEX idx_articles_pgroonga ON articles
+    USING pgroonga ((ARRAY[title, content]));
+
+-- 基本全文搜索
+-- 说明：pgroonga_score(tableoid, ctid) 计算搜索结果的相关性评分
+--   - tableoid: 表对象ID（PostgreSQL 系统列）
+--   - ctid: 行物理位置（PostgreSQL 系统列，格式如 (0,1)）
+--   - score: 分数越高表示匹配度越好，用于结果排序
+SELECT title, content,
+       pgroonga_score(tableoid, ctid) as score
+FROM articles
+WHERE ARRAY[title, content] &@~ '人工智能'
+ORDER BY score DESC;
+
+-- 多关键词搜索（AND 逻辑）
+SELECT title, content,
+       pgroonga_score(tableoid, ctid) as score
+FROM articles
+WHERE ARRAY[title, content] &@~ '人工智能 数据库'
+ORDER BY score DESC;
+
+-- 多关键词搜索（OR 逻辑）
+SELECT title, content,
+       pgroonga_score(tableoid, ctid) as score
+FROM articles
+WHERE ARRAY[title, content] &@~ '人工智能 OR 机器学习'
+ORDER BY score DESC;
+
+-- 前缀搜索
+SELECT title, content
+FROM articles
+WHERE ARRAY[title, content] &^~ '人工';
+
+-- 模糊搜索（相似度匹配）
+SELECT title, content,
+       pgroonga_score(tableoid, ctid) as score
+FROM articles
+WHERE ARRAY[title, content] &@* '人工智能'
+ORDER BY score DESC;
+
+-- 高亮搜索结果
+SELECT title,
+       pgroonga_highlight_html(content, pgroonga_query_extract_keywords('人工智能')) as highlighted_content
+FROM articles
+WHERE ARRAY[title, content] &@~ '人工智能';
+```
+
+**PGroonga 特点：**
+
+- ✅ 高性能：专门为全文搜索优化
+- ✅ 中文友好：原生支持中文、日文等多字节字符
+- ✅ 丰富的搜索操作：支持前缀搜索、模糊搜索、正则表达式等
+- ✅ 高亮功能：内置搜索结果高亮
+- ✅ 实时更新：索引自动更新，无需重建
 
 ### AI/向量搜索
 
