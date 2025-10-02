@@ -6,13 +6,11 @@
 
 ### 1. 基础数据类型扩展（无依赖）
 
-- **hstore** - 键值对存储
 - **ltree** - 层次结构数据存储
 
 ### 2. 基础功能扩展（无依赖）
 
 - **pg_stat_statements** - 查询性能统计
-- **pg_auditor** - 审计日志
 
 ### 3. JSON 和 GraphQL 扩展（无依赖）
 
@@ -30,72 +28,60 @@
 ### 6. 全文搜索基础扩展（无依赖）
 
 - **pg_trgm** - 三元组相似度搜索
-- **pg_bigm** - 二元组全文搜索
 - **fuzzystrmatch** - 模糊字符串匹配
 - **unaccent** - 去除重音符号
 
 ### 7. 需要预加载的扩展（无依赖）
 
-- **pg_search** - 高级搜索功能
-- **pg_tokenizer** - 分词器
 - **pg_duckdb** - DuckDB 集成
 
-### 8. 地理位置基础扩展
-
-- **ip4r** - IP 地址范围类型（基础）
-
-### 9. 地理位置扩展（依赖 ip4r）
+### 8. 地理位置扩展（无依赖）
 
 - **postgis** - 地理空间数据处理
-- **geoip** - 地理位置查询（依赖 ip4r）
 
-### 10. 时间序列扩展
+### 9. 时间序列扩展
 
 - **timescaledb** - 时间序列数据库（基础）
 
-### 11. AI/向量基础扩展
+### 10. AI/向量基础扩展
 
 - **vector** - 向量数据类型（基础）
 
-### 12. AI/向量相似度扩展（依赖 vector）
+### 11. AI/向量相似度扩展（依赖 vector）
 
-- **pg_similarity** - 相似度计算
 - **smlar** - 相似度匹配
 
-### 13. AI/向量高级扩展（依赖 vector）
+### 12. AI/向量高级扩展（依赖 vector）
 
 - **vchord** - 向量和弦搜索（依赖 vector）
 
-### 14. 高级全文搜索扩展（无依赖）
+### 13. 高级全文搜索扩展（无依赖）
 
 - **pgroonga** - 全文搜索引擎
 
-### 15. 中文分词扩展（无依赖）
+### 14. 中文分词扩展（无依赖）
 
 - **zhparser** - 中文分词器
 
-### 16. 分析能力扩展（无依赖）
+### 15. 分析能力扩展（无依赖）
 
 - **pg_analytics** - 分析功能
 - **pg_partman** - 分区管理
 - **pg_duckdb** - DuckDB 集成
-- **citus** - 分布式数据库
 - **tablefunc** - 表函数
 
 ## 🔗 依赖关系图
 
 ```text
 基础扩展
-├── 数据类型: hstore, ltree
-├── 功能: pg_stat_statements, pg_auditor
+├── 数据类型: ltree
+├── 功能: pg_stat_statements
 ├── JSON/GraphQL: pg_jsonschema, pg_graphql
 ├── 消息队列: pgmq
 ├── 索引: btree_gist
-└── 全文搜索: pg_trgm, pg_bigm, fuzzystrmatch, unaccent
+└── 全文搜索: pg_trgm, fuzzystrmatch, unaccent
 
 地理位置扩展
-├── ip4r (基础)
-│   └── geoip (依赖 ip4r)
 └── postgis (独立)
 
 时间序列扩展
@@ -103,14 +89,13 @@
 
 AI/向量扩展
 ├── vector (基础)
-│   ├── pg_similarity (依赖 vector)
 │   ├── smlar (依赖 vector)
 │   └── vchord (依赖 vector)
 
 高级扩展
 ├── pgroonga (独立)
 ├── zhparser (独立)
-└── 分析: pg_analytics, pg_partman, citus, tablefunc
+└── 分析: pg_analytics, pg_partman, tablefunc
 ```
 
 ## 📦 安装顺序
@@ -123,14 +108,13 @@ AI/向量扩展
 4. **消息队列扩展** → 无依赖
 5. **索引扩展** → 无依赖
 6. **全文搜索基础扩展** → 无依赖
-7. **地理位置基础扩展** → ip4r 必须先安装
-8. **地理位置扩展** → 依赖 ip4r
-9. **时间序列扩展** → timescaledb 必须先安装
-10. **AI/向量基础扩展** → vector 必须先安装
-11. **AI/向量相似度扩展** → 依赖 vector
-12. **AI/向量高级扩展** → 依赖 vector
-13. **高级全文搜索扩展** → 无依赖
-14. **分析能力扩展** → 无依赖
+7. **地理位置扩展** → 无依赖
+8. **时间序列扩展** → timescaledb 必须先安装
+9. **AI/向量基础扩展** → vector 必须先安装
+10. **AI/向量相似度扩展** → 依赖 vector
+11. **AI/向量高级扩展** → 依赖 vector
+12. **高级全文搜索扩展** → 无依赖
+13. **分析能力扩展** → 无依赖
 
 ### 初始化脚本中的启用顺序
 
@@ -151,10 +135,8 @@ AI/向量扩展
 以下扩展需要在 `shared_preload_libraries` 中预加载：
 
 - timescaledb
-- citus
-- pg_search
-- pg_tokenizer
 - pg_duckdb
+- vchord
 
 ### 中文全文搜索配置
 

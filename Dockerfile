@@ -53,10 +53,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # ===========================================
 
 # 1. 基础数据类型扩展（无依赖）
-RUN pig ext install hstore ltree -y
+RUN pig ext install ltree -y
 
 # 2. 基础功能扩展（无依赖）
-RUN pig ext install pg_stat_statements pg_auditor -y
+RUN pig ext install pg_stat_statements -y
 
 # 3. JSON 和 GraphQL 扩展（无依赖）
 RUN pig ext install pg_jsonschema pg_graphql -y
@@ -68,31 +68,28 @@ RUN pig ext install pgmq -y
 RUN pig ext install btree_gist -y
 
 # 6. 全文搜索基础扩展（无依赖）
-RUN pig ext install pg_trgm pg_bigm fuzzystrmatch unaccent -y
+RUN pig ext install pg_trgm fuzzystrmatch unaccent -y
 
-# 7. 地理位置基础扩展（ip4r 必须先安装）
-RUN pig ext install ip4r -y
+# 7. 地理位置扩展（无依赖）
+RUN pig ext install postgis -y
 
-# 8. 地理位置扩展（依赖 ip4r）
-RUN pig ext install postgis geoip -y
-
-# 9. 时间序列扩展（timescaledb 必须先安装）
+# 8. 时间序列扩展（timescaledb 必须先安装）
 RUN pig ext install timescaledb -y
 
-# 10. AI/向量基础扩展（vector 必须先安装）
+# 9. AI/向量基础扩展（vector 必须先安装）
 RUN pig ext install pgvector -y
 
-# 11. AI/向量相似度扩展（依赖 vector）
-RUN pig ext install pg_similarity smlar -y
+# 10. AI/向量相似度扩展（依赖 vector）
+RUN pig ext install smlar -y
 
-# 12. AI/向量高级扩展（依赖 vector）
+# 11. AI/向量高级扩展（依赖 vector）
 RUN pig ext install vchord -y
 
-# 13. 高级全文搜索扩展（无依赖）
-RUN pig ext install pgroonga pg_search pg_tokenizer zhparser -y
+# 12. 高级全文搜索扩展（无依赖）
+RUN pig ext install pgroonga zhparser -y
 
-# 14. 分析能力扩展（无依赖）
-RUN pig ext install pg_analytics pg_partman pg_duckdb citus tablefunc -y
+# 13. 分析能力扩展（无依赖）
+RUN pig ext install pg_analytics pg_partman pg_duckdb tablefunc -y
 
 
 # 复制初始化脚本到容器中
@@ -145,7 +142,7 @@ if [ ! -s "$PGDATA/PG_VERSION" ]; then\n\
     echo "listen_addresses = '\''*'\''" >> $PGDATA/postgresql.conf\n\
     \n\
     # 配置预加载扩展\n\
-    echo "shared_preload_libraries = '\''timescaledb,citus,pg_search,pg_tokenizer,pg_duckdb,vchord'\''" >> $PGDATA/postgresql.conf\n\
+    echo "shared_preload_libraries = '\''timescaledb,pg_duckdb,vchord'\''" >> $PGDATA/postgresql.conf\n\
     \n\
     echo "=== 启动 PostgreSQL 进行初始化 ==="\n\
     # 启动 PostgreSQL 进行初始化\n\

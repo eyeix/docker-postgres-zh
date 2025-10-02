@@ -32,27 +32,27 @@
 - **PostgreSQL 17**: 基于 Ubuntu 24.04 和 Pig 包管理器
 - **多架构支持**: 支持 2 种主要的 CPU 架构（基于 Pig 包管理器支持）
 - **中文数据处理**: 专门优化的中文分词、全文搜索和文本处理能力
-- **AI/向量支持**: 集成 pgvector、pg_similarity 等向量搜索扩展，支持中文语义搜索
+- **AI/向量支持**: 集成 pgvector、smlar 等向量搜索扩展，支持中文语义搜索
 - **时间序列**: 集成 TimescaleDB 时间序列数据库，支持中文标签和注释
 - **地理空间**: 集成 PostGIS 地理空间数据处理，支持中文地名和地址
 - **分析能力**: 集成 pg_analytics、pg_duckdb 等分析工具，支持中文数据分析
-- **扩展丰富**: 预装 30+ 个专业 PostgreSQL 扩展，全面支持中文应用场景
+- **扩展丰富**: 预装 20+ 个专业 PostgreSQL 扩展，全面支持中文应用场景
 - **容错构建**: 智能处理不同架构的包兼容性问题
 - **Pig 环境管理**: 使用 Pig 包管理器统一管理 PostgreSQL 内核和扩展
 
 ### 📦 预装扩展
 
-本镜像预装了 **28+ 个专业 PostgreSQL 扩展**，涵盖中文分词、全文搜索、向量搜索、时间序列、地理空间、数据分析等各个领域。
+本镜像预装了 **20+ 个专业 PostgreSQL 扩展**，涵盖中文分词、全文搜索、向量搜索、时间序列、地理空间、数据分析等各个领域。
 
 #### 主要扩展类别
 
 - **中文分词**: zhparser（基于 SCWS 的中文分词器）
-- **全文搜索**: pg_trgm、pg_bigm、pgroonga 等
-- **AI/向量**: pgvector、pg_similarity、smlar、vchord 等
+- **全文搜索**: pg_trgm、pgroonga 等
+- **AI/向量**: pgvector、smlar、vchord 等
 - **时间序列**: timescaledb
-- **地理空间**: postgis、geoip
-- **数据分析**: pg_analytics、pg_duckdb、citus、tablefunc
-- **功能增强**: pg_jsonschema、pg_graphql、pg_auditor 等
+- **地理空间**: postgis
+- **数据分析**: pg_analytics、pg_duckdb、tablefunc
+- **功能增强**: pg_jsonschema、pg_graphql 等
 
 > 📖 **详细扩展说明**: 查看 [EXTENSIONS.md](EXTENSIONS.md) 了解所有扩展的详细功能、依赖关系和安装顺序。
 

@@ -135,22 +135,19 @@ echo "=== 测试地理空间扩展 ==="
 docker exec postgres-test /usr/pgsql/bin/psql -U postgres -d postgres -c "SELECT * FROM pg_extension WHERE extname = 'postgis';" 2>/dev/null || echo "地理空间扩展可能不可用"
 
 echo "=== 测试 AI/向量扩展 ==="
-docker exec postgres-test /usr/pgsql/bin/psql -U postgres -d postgres -c "SELECT * FROM pg_extension WHERE extname IN ('vector', 'pg_similarity', 'smlar');" 2>/dev/null || echo "AI/向量扩展可能不可用"
+docker exec postgres-test /usr/pgsql/bin/psql -U postgres -d postgres -c "SELECT * FROM pg_extension WHERE extname IN ('vector', 'smlar');" 2>/dev/null || echo "AI/向量扩展可能不可用"
 
 echo "=== 测试全文搜索扩展 ==="
-docker exec postgres-test /usr/pgsql/bin/psql -U postgres -d postgres -c "SELECT * FROM pg_extension WHERE extname IN ('pgroonga', 'pg_search', 'pg_tokenizer');" 2>/dev/null || echo "高级全文搜索扩展可能不可用"
+docker exec postgres-test /usr/pgsql/bin/psql -U postgres -d postgres -c "SELECT * FROM pg_extension WHERE extname = 'pgroonga';" 2>/dev/null || echo "高级全文搜索扩展可能不可用"
 
 echo "=== 测试分析扩展 ==="
 docker exec postgres-test /usr/pgsql/bin/psql -U postgres -d postgres -c "SELECT * FROM pg_extension WHERE extname IN ('pg_analytics', 'pg_partman', 'tablefunc');" 2>/dev/null || echo "分析扩展可能不可用"
 
 echo "=== 测试功能扩展 ==="
-docker exec postgres-test /usr/pgsql/bin/psql -U postgres -d postgres -c "SELECT * FROM pg_extension WHERE extname IN ('pg_auditor', 'pg_stat_statements');" 2>/dev/null || echo "功能扩展可能不可用"
+docker exec postgres-test /usr/pgsql/bin/psql -U postgres -d postgres -c "SELECT * FROM pg_extension WHERE extname = 'pg_stat_statements';" 2>/dev/null || echo "功能扩展可能不可用"
 
 echo "=== 测试 JSON/GraphQL 扩展 ==="
 docker exec postgres-test /usr/pgsql/bin/psql -U postgres -d postgres -c "SELECT * FROM pg_extension WHERE extname IN ('pg_jsonschema', 'pg_graphql');" 2>/dev/null || echo "JSON/GraphQL 扩展可能不可用"
-
-echo "=== 测试分布式扩展 ==="
-docker exec postgres-test /usr/pgsql/bin/psql -U postgres -d postgres -c "SELECT * FROM pg_extension WHERE extname = 'citus';" 2>/dev/null || echo "分布式扩展可能不可用"
 
 echo "=== 测试 DuckDB 集成 ==="
 docker exec postgres-test /usr/pgsql/bin/psql -U postgres -d postgres -c "SELECT * FROM pg_extension WHERE extname = 'pg_duckdb';" 2>/dev/null || echo "DuckDB 集成可能不可用"

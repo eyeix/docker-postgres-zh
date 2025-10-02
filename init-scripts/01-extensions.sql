@@ -7,14 +7,12 @@
 -- ===========================================
 -- 1. 基础数据类型扩展（无依赖）
 -- ===========================================
-CREATE EXTENSION IF NOT EXISTS hstore;
 CREATE EXTENSION IF NOT EXISTS ltree;
 
 -- ===========================================
 -- 2. 基础功能扩展（无依赖）
 -- ===========================================
 CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
-CREATE EXTENSION IF NOT EXISTS pg_auditor;
 
 -- ===========================================
 -- 3. JSON 和 GraphQL 扩展（无依赖）
@@ -36,24 +34,16 @@ CREATE EXTENSION IF NOT EXISTS btree_gist;
 -- 6. 全文搜索基础扩展（无依赖）
 -- ===========================================
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
-CREATE EXTENSION IF NOT EXISTS pg_bigm;
 CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;
 CREATE EXTENSION IF NOT EXISTS unaccent;
 
 -- ===========================================
 -- 7. 需要预加载的扩展（无依赖）
 -- ===========================================
-CREATE EXTENSION IF NOT EXISTS pg_search;
-CREATE EXTENSION IF NOT EXISTS pg_tokenizer;
 CREATE EXTENSION IF NOT EXISTS pg_duckdb;
 
 -- ===========================================
--- 8. 地理位置基础扩展（必须先安装）
--- ===========================================
-CREATE EXTENSION IF NOT EXISTS ip4r;
-
--- ===========================================
--- 9. 地理位置扩展（依赖 ip4r）
+-- 8. 地理位置扩展（无依赖）
 -- ===========================================
 DO $$
 BEGIN
@@ -64,18 +54,10 @@ BEGIN
         WHEN OTHERS THEN
             RAISE NOTICE 'postgis extension not available: %', SQLERRM;
     END;
-    
-    BEGIN
-        CREATE EXTENSION IF NOT EXISTS geoip;
-        RAISE NOTICE 'geoip extension created successfully';
-    EXCEPTION
-        WHEN OTHERS THEN
-            RAISE NOTICE 'geoip extension not available: %', SQLERRM;
-    END;
 END $$;
 
 -- ===========================================
--- 10. 时间序列扩展（容错处理）
+-- 9. 时间序列扩展（容错处理）
 -- ===========================================
 DO $$
 BEGIN
@@ -90,7 +72,7 @@ BEGIN
 END $$;
 
 -- ===========================================
--- 11. AI/向量基础扩展（容错处理）
+-- 10. AI/向量基础扩展（容错处理）
 -- ===========================================
 DO $$
 BEGIN
@@ -104,18 +86,10 @@ BEGIN
 END $$;
 
 -- ===========================================
--- 12. AI/向量相似度扩展（依赖 vector）
+-- 11. AI/向量相似度扩展（依赖 vector）
 -- ===========================================
 DO $$
 BEGIN
-    BEGIN
-        CREATE EXTENSION IF NOT EXISTS pg_similarity;
-        RAISE NOTICE 'pg_similarity extension created successfully';
-    EXCEPTION
-        WHEN OTHERS THEN
-            RAISE NOTICE 'pg_similarity extension not available: %', SQLERRM;
-    END;
-    
     BEGIN
         CREATE EXTENSION IF NOT EXISTS smlar;
         RAISE NOTICE 'smlar extension created successfully';
@@ -126,7 +100,7 @@ BEGIN
 END $$;
 
 -- ===========================================
--- 13. AI/向量高级扩展（依赖 vector）
+-- 12. AI/向量高级扩展（依赖 vector）
 -- ===========================================
 DO $$
 BEGIN
@@ -147,7 +121,7 @@ END $$;
 
 
 -- ===========================================
--- 14. 高级全文搜索扩展（容错处理）
+-- 13. 高级全文搜索扩展（容错处理）
 -- ===========================================
 DO $$
 BEGIN
@@ -161,7 +135,7 @@ BEGIN
 END $$;
 
 -- ===========================================
--- 15. 中文分词扩展（容错处理）
+-- 14. 中文分词扩展（容错处理）
 -- ===========================================
 DO $$
 BEGIN
@@ -183,16 +157,15 @@ BEGIN
 END $$;
 
 -- ===========================================
--- 16. 分析能力扩展（无依赖）
+-- 15. 分析能力扩展（无依赖）
 -- ===========================================
 CREATE EXTENSION IF NOT EXISTS pg_analytics;
 CREATE EXTENSION IF NOT EXISTS pg_partman;
 CREATE EXTENSION IF NOT EXISTS pg_duckdb;
-CREATE EXTENSION IF NOT EXISTS citus;
 CREATE EXTENSION IF NOT EXISTS tablefunc;
 
 -- ===========================================
--- 17. 显示已安装的扩展信息
+-- 16. 显示已安装的扩展信息
 -- ===========================================
 DO $$
 DECLARE
