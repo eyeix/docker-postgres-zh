@@ -446,7 +446,7 @@ CREATE EXTENSION IF NOT EXISTS vector;
 CREATE TABLE embeddings (
     id SERIAL PRIMARY KEY,
     content TEXT,
-    embedding vector(1536)
+    embedding vector(5)
 );
 
 -- 插入向量数据
