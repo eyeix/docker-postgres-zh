@@ -40,7 +40,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: riccoxie/postgres-zh
+          images: eyeix/postgres-zh
           tags: |
             type=ref,event=branch
             type=ref,event=tag
