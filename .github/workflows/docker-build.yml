@@ -42,7 +42,6 @@ jobs:
         with:
           images: eyeix/postgres-zh
           tags: |
-            type=ref,event=branch
             type=ref,event=tag
             type=sha,format=short
 
