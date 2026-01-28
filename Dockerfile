@@ -133,13 +133,26 @@ fi\n\
 # ===========================================\n\
 # 修复数据目录权限（用于挂载场景）\n\
 # ===========================================\n\
-# 如果目录存在但不是 postgres 用户所有，修复权限\n\
+# 如果目录存在但不是 postgres 用户所有，尝试修复权限\n\
 if [ -d "$PGDATA" ]; then\n\
     current_owner=$(stat -c "%u:%g" "$PGDATA" 2>/dev/null || echo "0:0")\n\
     if [ "$current_owner" != "999:999" ]; then\n\
-        echo "=== 修复数据目录权限: $current_owner -> 999:999 ==="\n\
-        chown -R 999:999 "$PGDATA"\n\
-        echo "=== 权限修复完成 ==="\n\
+        echo "=== 检测到数据目录权限: $current_owner，尝试修复为 999:999 ==="\n\
+        if chown -R 999:999 "$PGDATA" 2>/dev/null; then\n\
+            echo "=== 权限修复完成 ==="\n\
+        else\n\
+            echo "=== 警告：无法自动修复权限 ==="\n\
+            echo "请在宿主机上执行以下命令修复权限："\n\
+            echo "  sudo chown -R 999:999 <宿主机数据目录路径>"\n\
+            echo ""\n\
+            echo "或者使用 Docker 命名卷代替目录挂载："\n\
+            echo "  docker volume create postgres_data"\n\
+            echo "  docker run -v postgres_data:/var/lib/postgresql/data ..."\n\
+            echo ""\n\
+            echo "如果您使用的是特殊文件系统（NFS、云存储等），"\n\
+            echo "可能需要在启动容器时添加 --privileged 参数"\n\
+            exit 1\n\
+        fi\n\
     fi\n\
 fi\n\
 \n\
