@@ -3,6 +3,8 @@ name: Build and Push Docker Image
 on:
   push:
     branches: [ v17 ]
+    tags:
+      - 'v*'
     paths-ignore:
       - 'README.md'
       - 'docs/**'
