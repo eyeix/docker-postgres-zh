@@ -503,7 +503,50 @@ SET pg_trgm.similarity_threshold = 0.3;
 
 ### 常见问题
 
-1. **扩展安装失败**
+#### 1. 挂载数据目录权限错误
+
+当使用 `-v` 参数挂载宿主机目录时，可能会遇到权限错误：
+
+```
+initdb: error: could not change permissions of directory "/var/lib/postgresql/data": Operation not permitted
+```
+
+**原因**: 容器内的 `postgres` 用户（UID 999）没有权限修改挂载的宿主机目录。
+
+**解决方案**: 本镜像已内置权限修复逻辑，会在启动时自动修复挂载目录的权限。但如果仍遇到问题，可以尝试以下方法：
+
+```bash
+# 方法 1：以 root 权限运行容器（推荐用于本地开发）
+docker run -d \
+  --name postgres-zh \
+  -v /path/to/your/data:/var/lib/postgresql/data \
+  -e POSTGRES_PASSWORD=your_password \
+  -p 5432:5432 \
+  eyeix/postgres-zh:v17
+
+# 方法 2：手动修改宿主机目录权限（推荐用于生产环境）
+sudo chown -R 999:999 /path/to/your/data
+```
+
+**使用命名卷（推荐）**: 使用 Docker 命名卷可以避免权限问题，Docker 会自动处理权限：
+
+```yaml
+# docker-compose.yml
+services:
+  postgres:
+    image: eyeix/postgres-zh:v17
+    volumes:
+      - postgres_data:/var/lib/postgresql/data  # 使用命名卷
+    environment:
+      POSTGRES_PASSWORD: your_password
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:
+```
+
+#### 2. 扩展安装失败
 
    ```bash
    # 检查扩展是否正确安装

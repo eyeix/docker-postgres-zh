@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     sudo \
     systemd \
+    gosu \
     && rm -rf /var/lib/apt/lists/*
 
 # 安装 Pig 包管理器
@@ -130,11 +131,24 @@ if [ -z "$POSTGRES_DB" ]; then\n\
 fi\n\
 \n\
 # ===========================================\n\
+# 修复数据目录权限（用于挂载场景）\n\
+# ===========================================\n\
+# 如果目录存在但不是 postgres 用户所有，修复权限\n\
+if [ -d "$PGDATA" ]; then\n\
+    current_owner=$(stat -c "%u:%g" "$PGDATA" 2>/dev/null || echo "0:0")\n\
+    if [ "$current_owner" != "999:999" ]; then\n\
+        echo "=== 修复数据目录权限: $current_owner -> 999:999 ==="\n\
+        chown -R 999:999 "$PGDATA"\n\
+        echo "=== 权限修复完成 ==="\n\
+    fi\n\
+fi\n\
+\n\
+# ===========================================\n\
 # 数据库初始化（仅在首次启动时执行）\n\
 # ===========================================\n\
 if [ ! -s "$PGDATA/PG_VERSION" ]; then\n\
     echo "=== 初始化 PostgreSQL 数据库 ==="\n\
-    /usr/pgsql/bin/initdb\n\
+    gosu postgres /usr/pgsql/bin/initdb\n\
     \n\
     echo "=== 配置 PostgreSQL 参数 ==="\n\
     # 配置网络访问\n\
@@ -146,20 +160,20 @@ if [ ! -s "$PGDATA/PG_VERSION" ]; then\n\
     \n\
     echo "=== 启动 PostgreSQL 进行初始化 ==="\n\
     # 启动 PostgreSQL 进行初始化\n\
-    /usr/pgsql/bin/postgres &\n\
+    gosu postgres /usr/pgsql/bin/postgres &\n\
     sleep 5\n\
     \n\
     echo "=== 创建用户和数据库 ==="\n\
     # 如果用户不是默认的 postgres，创建新用户\n\
     if [ "$POSTGRES_USER" != "postgres" ]; then\n\
-        /usr/pgsql/bin/psql -c "CREATE USER $POSTGRES_USER WITH SUPERUSER PASSWORD '\''$POSTGRES_PASSWORD'\'';"\n\
+        gosu postgres /usr/pgsql/bin/psql -c "CREATE USER $POSTGRES_USER WITH SUPERUSER PASSWORD '\''$POSTGRES_PASSWORD'\'';"\n\
     else\n\
-        /usr/pgsql/bin/psql -c "ALTER USER postgres PASSWORD '\''$POSTGRES_PASSWORD'\'';"\n\
+        gosu postgres /usr/pgsql/bin/psql -c "ALTER USER postgres PASSWORD '\''$POSTGRES_PASSWORD'\'';"\n\
     fi\n\
     \n\
     # 创建指定的数据库\n\
     if [ "$POSTGRES_DB" != "postgres" ]; then\n\
-        /usr/pgsql/bin/createdb -U postgres -O $POSTGRES_USER "$POSTGRES_DB"\n\
+        gosu postgres /usr/pgsql/bin/createdb -U postgres -O $POSTGRES_USER "$POSTGRES_DB"\n\
     fi\n\
     \n\
     echo "=== 执行扩展初始化脚本 ==="\n\
@@ -167,8 +181,8 @@ if [ ! -s "$PGDATA/PG_VERSION" ]; then\n\
     for f in /docker-entrypoint-initdb.d/*; do\n\
         case "$f" in\n\
             *.sh)     echo "$0: running $f"; . "$f" ;;\n\
-            *.sql)    echo "$0: running $f"; /usr/pgsql/bin/psql -U postgres -d "$POSTGRES_DB" -f "$f" ;;\n\
-            *.sql.gz) echo "$0: running $f"; gunzip -c "$f" | /usr/pgsql/bin/psql -U postgres -d "$POSTGRES_DB" ;;\n\
+            *.sql)    echo "$0: running $f"; gosu postgres /usr/pgsql/bin/psql -U postgres -d "$POSTGRES_DB" -f "$f" ;;\n\
+            *.sql.gz) echo "$0: running $f"; gunzip -c "$f" | gosu postgres /usr/pgsql/bin/psql -U postgres -d "$POSTGRES_DB" ;;\n\
             *)        echo "$0: ignoring $f" ;;\n\
         esac\n\
     done\n\
@@ -179,14 +193,13 @@ if [ ! -s "$PGDATA/PG_VERSION" ]; then\n\
 fi\n\
 \n\
 echo "=== 启动 PostgreSQL 服务 ==="\n\
-# 启动 PostgreSQL\n\
-exec /usr/pgsql/bin/postgres\n\
+# 启动 PostgreSQL（以 postgres 用户身份）\n\
+exec gosu postgres /usr/pgsql/bin/postgres\n\
 ' > /usr/local/bin/docker-entrypoint.sh && chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# 不需要安装额外的包，直接使用系统自带的 su 命令
-
-# 切换回postgres用户
-USER postgres
-
+# ===========================================
 # 设置启动命令
+# ===========================================
+# 注意：容器以 root 用户运行，启动脚本使用 gosu 切换到 postgres 用户
+# 这样可以修复挂载目录的权限问题
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
