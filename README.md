@@ -503,32 +503,40 @@ SET pg_trgm.similarity_threshold = 0.3;
 
 ### 常见问题
 
-#### 1. 挂载数据目录权限错误
+#### 1. 数据持久化和权限
 
-当使用 `-v` 参数挂载宿主机目录时，可能会遇到权限错误：
+**✅ 自动权限适配**: 本镜像采用智能权限适配机制，会在启动时自动调整容器内 `postgres` 用户的 UID/GID 以匹配挂载目录的所有者，**无需手动修复权限**。
 
-```
-initdb: error: could not change permissions of directory "/var/lib/postgresql/data": Operation not permitted
-```
-
-**原因**: 容器内的 `postgres` 用户（UID 999）没有权限修改挂载的宿主机目录。
-
-**解决方案**: 本镜像已内置权限修复逻辑，会在启动时自动修复挂载目录的权限。但如果仍遇到问题，可以尝试以下方法：
+**推荐方式**：
 
 ```bash
-# 方法 1：以 root 权限运行容器（推荐用于本地开发）
+# 方式 1：使用命名卷（推荐）
+docker volume create postgres_data
 docker run -d \
   --name postgres-zh \
-  -v /path/to/your/data:/var/lib/postgresql/data \
+  -v postgres_data:/var/lib/postgresql/data \
   -e POSTGRES_PASSWORD=your_password \
   -p 5432:5432 \
   eyeix/postgres-zh:v17
 
-# 方法 2：手动修改宿主机目录权限（推荐用于生产环境）
-sudo chown -R 999:999 /path/to/your/data
+# 方式 2：使用目录挂载（自动适配权限）
+docker run -d \
+  --name postgres-zh \
+  -v /path/to/data:/var/lib/postgresql/data \
+  -e POSTGRES_PASSWORD=your_password \
+  -p 5432:5432 \
+  eyeix/postgres-zh:v17
 ```
 
-**使用命名卷（推荐）**: 使用 Docker 命名卷可以避免权限问题，Docker 会自动处理权限：
+**特性**：
+- ✅ 支持任意 UID/GID，自动适配
+- ✅ 支持 NFS、云存储等特殊文件系统
+- ✅ 无需 `--privileged` 参数
+- ✅ 无需手动 `chown` 修复权限
+
+详细说明请参考：[权限自动适配规范](openspec/specs/permission-auto-adapt.md)
+
+**使用 Docker Compose**：
 
 ```yaml
 # docker-compose.yml

@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: eyeix/postgres-zh:v17
+    container_name: postgres-zh
+    environment:
+      POSTGRES_DB: zh-app
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: your_password
+    ports:
+      - "5432:5432"
+    volumes:
+      # 使用命名卷（推荐）
+      - postgres_data:/var/lib/postgresql/data
+      # 或使用宿主机目录挂载（权限会自动适配）
+      # - ./data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "/usr/pgsql/bin/pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+    driver: local

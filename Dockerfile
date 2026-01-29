@@ -108,107 +108,12 @@ ENV POSTGRES_DB=postgres
 # 暴露端口
 EXPOSE 5432
 
+
 # ===========================================
-# 创建 PostgreSQL 入口脚本
+# 复制并设置 PostgreSQL 入口脚本
 # ===========================================
-# 创建启动脚本
-RUN echo '#!/bin/bash\n\
-set -e\n\
-\n\
-# ===========================================\n\
-# PostgreSQL 中文适配镜像启动脚本\n\
-# ===========================================\n\
-\n\
-# 设置默认值（如果未提供）\n\
-if [ -z "$POSTGRES_USER" ]; then\n\
-    export POSTGRES_USER=postgres\n\
-fi\n\
-if [ -z "$POSTGRES_PASSWORD" ]; then\n\
-    export POSTGRES_PASSWORD=postgres\n\
-fi\n\
-if [ -z "$POSTGRES_DB" ]; then\n\
-    export POSTGRES_DB=postgres\n\
-fi\n\
-\n\
-# ===========================================\n\
-# 修复数据目录权限（用于挂载场景）\n\
-# ===========================================\n\
-# 如果目录存在但不是 postgres 用户所有，尝试修复权限\n\
-if [ -d "$PGDATA" ]; then\n\
-    current_owner=$(stat -c "%u:%g" "$PGDATA" 2>/dev/null || echo "0:0")\n\
-    if [ "$current_owner" != "999:999" ]; then\n\
-        echo "=== 检测到数据目录权限: $current_owner，尝试修复为 999:999 ==="\n\
-        if chown -R 999:999 "$PGDATA" 2>/dev/null; then\n\
-            echo "=== 权限修复完成 ==="\n\
-        else\n\
-            echo "=== 警告：无法自动修复权限 ==="\n\
-            echo "请在宿主机上执行以下命令修复权限："\n\
-            echo "  sudo chown -R 999:999 <宿主机数据目录路径>"\n\
-            echo ""\n\
-            echo "或者使用 Docker 命名卷代替目录挂载："\n\
-            echo "  docker volume create postgres_data"\n\
-            echo "  docker run -v postgres_data:/var/lib/postgresql/data ..."\n\
-            echo ""\n\
-            echo "如果您使用的是特殊文件系统（NFS、云存储等），"\n\
-            echo "可能需要在启动容器时添加 --privileged 参数"\n\
-            exit 1\n\
-        fi\n\
-    fi\n\
-fi\n\
-\n\
-# ===========================================\n\
-# 数据库初始化（仅在首次启动时执行）\n\
-# ===========================================\n\
-if [ ! -s "$PGDATA/PG_VERSION" ]; then\n\
-    echo "=== 初始化 PostgreSQL 数据库 ==="\n\
-    gosu postgres /usr/pgsql/bin/initdb\n\
-    \n\
-    echo "=== 配置 PostgreSQL 参数 ==="\n\
-    # 配置网络访问\n\
-    echo "host all all 0.0.0.0/0 md5" >> $PGDATA/pg_hba.conf\n\
-    echo "listen_addresses = '\''*'\''" >> $PGDATA/postgresql.conf\n\
-    \n\
-    # 配置预加载扩展\n\
-    echo "shared_preload_libraries = '\''timescaledb,pg_duckdb,vchord'\''" >> $PGDATA/postgresql.conf\n\
-    \n\
-    echo "=== 启动 PostgreSQL 进行初始化 ==="\n\
-    # 启动 PostgreSQL 进行初始化\n\
-    gosu postgres /usr/pgsql/bin/postgres &\n\
-    sleep 5\n\
-    \n\
-    echo "=== 创建用户和数据库 ==="\n\
-    # 如果用户不是默认的 postgres，创建新用户\n\
-    if [ "$POSTGRES_USER" != "postgres" ]; then\n\
-        gosu postgres /usr/pgsql/bin/psql -c "CREATE USER $POSTGRES_USER WITH SUPERUSER PASSWORD '\''$POSTGRES_PASSWORD'\'';"\n\
-    else\n\
-        gosu postgres /usr/pgsql/bin/psql -c "ALTER USER postgres PASSWORD '\''$POSTGRES_PASSWORD'\'';"\n\
-    fi\n\
-    \n\
-    # 创建指定的数据库\n\
-    if [ "$POSTGRES_DB" != "postgres" ]; then\n\
-        gosu postgres /usr/pgsql/bin/createdb -U postgres -O $POSTGRES_USER "$POSTGRES_DB"\n\
-    fi\n\
-    \n\
-    echo "=== 执行扩展初始化脚本 ==="\n\
-    # 执行初始化脚本\n\
-    for f in /docker-entrypoint-initdb.d/*; do\n\
-        case "$f" in\n\
-            *.sh)     echo "$0: running $f"; . "$f" ;;\n\
-            *.sql)    echo "$0: running $f"; gosu postgres /usr/pgsql/bin/psql -U postgres -d "$POSTGRES_DB" -f "$f" ;;\n\
-            *.sql.gz) echo "$0: running $f"; gunzip -c "$f" | gosu postgres /usr/pgsql/bin/psql -U postgres -d "$POSTGRES_DB" ;;\n\
-            *)        echo "$0: ignoring $f" ;;\n\
-        esac\n\
-    done\n\
-    \n\
-    echo "=== 完成初始化，停止临时 PostgreSQL ==="\n\
-    kill %1\n\
-    wait\n\
-fi\n\
-\n\
-echo "=== 启动 PostgreSQL 服务 ==="\n\
-# 启动 PostgreSQL（以 postgres 用户身份）\n\
-exec gosu postgres /usr/pgsql/bin/postgres\n\
-' > /usr/local/bin/docker-entrypoint.sh && chmod +x /usr/local/bin/docker-entrypoint.sh
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # ===========================================
 # 设置启动命令
