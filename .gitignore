@@ -1,0 +1,21 @@
+# 编辑器配置
+.idea/
+*.swp
+*.swo
+*~
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
+
+# 测试数据
+data/
+*.log
+
+# Docker 相关
+docker-build.log
+
+# 临时文件
+tmp/
+temp/
+*.tmp

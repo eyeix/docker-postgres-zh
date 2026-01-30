@@ -505,12 +505,12 @@ SET pg_trgm.similarity_threshold = 0.3;
 
 #### 1. 数据持久化和权限
 
-**✅ 自动权限适配**: 本镜像采用智能权限适配机制，会在启动时自动调整容器内 `postgres` 用户的 UID/GID 以匹配挂载目录的所有者，**无需手动修复权限**。
+**✅ 自动权限修复**: 本镜像会在启动时自动将数据目录的所有者修改为容器内的 `postgres` 用户（UID:999, GID:999），**无需手动修复权限**。
 
 **推荐方式**：
 
 ```bash
-# 方式 1：使用命名卷（推荐）
+# 方式 1：使用命名卷（推荐，最简单）
 docker volume create postgres_data
 docker run -d \
   --name postgres-zh \
@@ -519,7 +519,7 @@ docker run -d \
   -p 5432:5432 \
   eyeix/postgres-zh:v17
 
-# 方式 2：使用目录挂载（自动适配权限）
+# 方式 2：使用目录挂载（自动修复权限）
 docker run -d \
   --name postgres-zh \
   -v /path/to/data:/var/lib/postgresql/data \
@@ -529,12 +529,65 @@ docker run -d \
 ```
 
 **特性**：
-- ✅ 支持任意 UID/GID，自动适配
-- ✅ 支持 NFS、云存储等特殊文件系统
+- ✅ 自动修复数据目录权限
+- ✅ 支持命名卷和目录挂载
 - ✅ 无需 `--privileged` 参数
 - ✅ 无需手动 `chown` 修复权限
 
-详细说明请参考：[权限自动适配规范](openspec/specs/permission-auto-adapt.md)
+**注意事项**：
+- 容器内 postgres 用户的 UID/GID 固定为 999:999
+- 如果使用目录挂载，容器会自动将目录所有者改为 999:999
+- 如果需要在宿主机上访问数据目录，可以：
+  ```bash
+  # 方法 1：将宿主机用户添加到 GID 999 的组
+  sudo groupadd -g 999 postgres
+  sudo usermod -aG postgres $USER
+
+  # 方法 2：在宿主机上预先设置目录权限
+  sudo mkdir -p /path/to/data
+  sudo chown -R 999:999 /path/to/data
+  ```
+
+**故障排除**：
+
+如果遇到权限错误（如 `operation not permitted`）或其他问题，请查看：
+
+- 📖 [完整故障排除指南](troubleshooting/TROUBLESHOOTING.md) - 包含快速测试、常见问题、详细修复说明和诊断步骤
+- 💡 继续阅读下面的快速诊断步骤
+
+诊断步骤：
+
+1. **确认容器以 root 用户运行**（默认行为）：
+   ```bash
+   docker inspect postgres-zh | grep -i user
+   # 应该没有输出或显示 "User": ""
+   ```
+
+2. **检查容器日志**：
+   ```bash
+   docker logs postgres-zh
+   # 查看权限检查和 gosu 测试结果
+   ```
+
+3. **检查 SELinux 或 AppArmor 限制**（某些 Linux 发行版）：
+   ```bash
+   # SELinux（CentOS/RHEL/Fedora）
+   getenforce
+   sudo chcon -Rt svirt_sandbox_file_t /path/to/data
+
+   # AppArmor（Ubuntu/Debian）
+   sudo aa-status
+   ```
+
+4. **使用命名卷代替目录挂载**（最简单的解决方案）：
+   ```bash
+   docker volume create postgres_data
+   docker run -d --name postgres-zh \
+     -v postgres_data:/var/lib/postgresql/data \
+     -e POSTGRES_PASSWORD=your_password \
+     -p 5432:5432 \
+     eyeix/postgres-zh:v17
+   ```
 
 **使用 Docker Compose**：
 

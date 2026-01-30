@@ -5,6 +5,12 @@ set -e
 # PostgreSQL 中文适配镜像启动脚本
 # ===========================================
 
+# 调试信息：显示当前用户和环境
+echo "=== 容器启动信息 ==="
+echo "当前用户: $(whoami) (UID=$(id -u), GID=$(id -g))"
+echo "postgres 用户: UID=$(id -u postgres 2>/dev/null || echo 'N/A') GID=$(id -g postgres 2>/dev/null || echo 'N/A')"
+echo "gosu 版本: $(gosu --version 2>/dev/null || echo 'N/A')"
+
 # 设置默认值（如果未提供）
 if [ -z "$POSTGRES_USER" ]; then
     export POSTGRES_USER=postgres
@@ -19,43 +25,81 @@ fi
 # ===========================================
 # 智能权限适配（用于挂载场景）
 # ===========================================
-# 如果数据目录已存在，动态调整 postgres 用户的 UID/GID 以匹配目录所有者
-if [ -d "$PGDATA" ]; then
-    # 获取数据目录的所有者 UID 和 GID
-    dir_uid=$(stat -c "%u" "$PGDATA" 2>/dev/null || echo "999")
-    dir_gid=$(stat -c "%g" "$PGDATA" 2>/dev/null || echo "999")
-
-    # 获取当前 postgres 用户的 UID 和 GID
-    current_uid=$(id -u postgres 2>/dev/null || echo "999")
-    current_gid=$(id -g postgres 2>/dev/null || echo "999")
-
-    # 如果目录所有者与 postgres 用户不匹配，调整 postgres 用户的 UID/GID
-    if [ "$dir_uid" != "$current_uid" ] || [ "$dir_gid" != "$current_gid" ]; then
-        echo "=== 检测到数据目录所有者: $dir_uid:$dir_gid ==="
-        echo "=== 调整 postgres 用户 UID/GID 以匹配数据目录 ==="
-
-        # 修改 postgres 用户的 GID
-        if [ "$dir_gid" != "$current_gid" ]; then
-            groupmod -g "$dir_gid" postgres 2>/dev/null || echo "警告：无法修改组 GID"
-        fi
-
-        # 修改 postgres 用户的 UID
-        if [ "$dir_uid" != "$current_uid" ]; then
-            usermod -u "$dir_uid" postgres 2>/dev/null || echo "警告：无法修改用户 UID"
-        fi
-
-        # 修复容器内其他目录的权限
-        chown -R postgres:postgres /var/lib/postgresql /docker-entrypoint-initdb.d 2>/dev/null || true
-
-        echo "=== 权限适配完成：postgres 用户现在是 $(id -u postgres):$(id -g postgres) ==="
-    else
-        echo "=== 数据目录权限正常: $dir_uid:$dir_gid ==="
-    fi
-else
-    # 如果数据目录不存在，创建它
+# 确保数据目录存在
+if [ ! -d "$PGDATA" ]; then
     echo "=== 创建数据目录 $PGDATA ==="
     mkdir -p "$PGDATA"
-    chown -R postgres:postgres "$PGDATA"
+fi
+
+# 获取数据目录的当前所有者
+dir_uid=$(stat -c "%u" "$PGDATA" 2>/dev/null || stat -f "%u" "$PGDATA" 2>/dev/null || echo "0")
+dir_gid=$(stat -c "%g" "$PGDATA" 2>/dev/null || stat -f "%g" "$PGDATA" 2>/dev/null || echo "0")
+
+# 获取 postgres 用户的 UID 和 GID
+postgres_uid=$(id -u postgres 2>/dev/null || echo "999")
+postgres_gid=$(id -g postgres 2>/dev/null || echo "999")
+
+echo "=== 权限检查 ==="
+echo "数据目录: $PGDATA"
+echo "数据目录所有者: $dir_uid:$dir_gid"
+echo "postgres 用户: $postgres_uid:$postgres_gid"
+
+# 如果目录所有者与 postgres 用户不匹配，修改目录所有者
+if [ "$dir_uid" != "$postgres_uid" ] || [ "$dir_gid" != "$postgres_gid" ]; then
+    echo "=== 修改数据目录所有者为 postgres 用户 ==="
+
+    # 尝试修改所有者（只修改顶层目录，避免递归修改大量文件）
+    if chown postgres:postgres "$PGDATA" 2>/dev/null; then
+        echo "✓ 顶层目录所有者修改成功"
+
+        # 如果目录为空或只包含少量文件，递归修改
+        file_count=$(find "$PGDATA" -maxdepth 1 | wc -l)
+        if [ "$file_count" -lt 10 ]; then
+            echo "目录为空或文件较少，递归修改所有者..."
+            chown -R postgres:postgres "$PGDATA" 2>/dev/null || echo "警告：部分文件所有者修改失败"
+        else
+            echo "目录包含数据，仅修改顶层目录所有者"
+        fi
+    else
+        echo "错误：无法修改数据目录权限"
+        echo ""
+        echo "可能的原因："
+        echo "1. 容器没有足够的权限修改挂载目录"
+        echo "2. SELinux 或 AppArmor 阻止了操作"
+        echo "3. 文件系统不支持 chown 操作（如某些网络文件系统）"
+        echo ""
+        echo "解决方案："
+        echo "1. 使用命名卷代替目录挂载："
+        echo "   docker volume create postgres_data"
+        echo "   docker run -v postgres_data:/var/lib/postgresql/data ..."
+        echo ""
+        echo "2. 在宿主机上预先设置目录权限："
+        echo "   sudo chown -R $postgres_uid:$postgres_gid <宿主机数据目录>"
+        echo ""
+        echo "3. 如果使用 SELinux，添加正确的上下文："
+        echo "   sudo chcon -Rt svirt_sandbox_file_t <宿主机数据目录>"
+        exit 1
+    fi
+else
+    echo "✓ 数据目录权限正常"
+fi
+
+# 确保其他必要目录的权限正确
+echo "=== 检查其他目录权限 ==="
+chown -R postgres:postgres /var/lib/postgresql /docker-entrypoint-initdb.d 2>/dev/null || echo "警告：部分目录权限修改失败"
+
+# 测试 gosu 是否能正常工作
+echo "=== 测试 gosu 功能 ==="
+if gosu postgres id >/dev/null 2>&1; then
+    echo "✓ gosu 测试成功"
+else
+    echo "错误：gosu 无法切换到 postgres 用户"
+    echo "当前 postgres 用户信息："
+    id postgres || echo "postgres 用户不存在"
+    echo ""
+    echo "这可能是容器安全限制导致的问题。"
+    echo "请尝试使用命名卷代替目录挂载。"
+    exit 1
 fi
 
 # ===========================================

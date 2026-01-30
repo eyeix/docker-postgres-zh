@@ -16,7 +16,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     sudo \
     systemd \
     gosu \
+    locales \
     && rm -rf /var/lib/apt/lists/*
+
+# 配置 locale
+RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && \
+    sed -i '/zh_CN.UTF-8/s/^# //g' /etc/locale.gen && \
+    locale-gen en_US.UTF-8 zh_CN.UTF-8 && \
+    update-locale LANG=en_US.UTF-8
+
+ENV LANG=en_US.UTF-8 \
+    LANGUAGE=en_US:en \
+    LC_ALL=en_US.UTF-8
 
 # 安装 Pig 包管理器
 RUN curl -fsSL https://repo.pigsty.io/pig | bash
@@ -32,13 +43,48 @@ RUN pig ext link 17
 # 立即生效
 RUN . /etc/profile.d/pgsql.sh
 
-# 检查 postgres 用户是否存在，如果不存在则创建
-RUN if ! id postgres >/dev/null 2>&1; then \
-        groupadd -r postgres --gid=999 && useradd -r -g postgres --uid=999 postgres; \
-    fi
+# 确保 postgres 用户存在且 UID/GID 正确
+# 策略：删除现有的 postgres 用户/组，然后重新创建为 999:999
+RUN set -ex; \
+    # 检查是否存在 UID 999 或 GID 999 的冲突
+    existing_uid_user=$(getent passwd 999 | cut -d: -f1 || echo ""); \
+    existing_gid_group=$(getent group 999 | cut -d: -f1 || echo ""); \
+    \
+    # 如果 postgres 用户存在，删除它
+    if id postgres >/dev/null 2>&1; then \
+        echo "删除现有的 postgres 用户"; \
+        userdel postgres 2>/dev/null || true; \
+    fi; \
+    \
+    # 如果 postgres 组存在，删除它
+    if getent group postgres >/dev/null 2>&1; then \
+        echo "删除现有的 postgres 组"; \
+        groupdel postgres 2>/dev/null || true; \
+    fi; \
+    \
+    # 如果 GID 999 被其他组占用，删除或修改它
+    if [ -n "$existing_gid_group" ] && [ "$existing_gid_group" != "postgres" ]; then \
+        echo "GID 999 被组 $existing_gid_group 占用，修改为 1999"; \
+        groupmod -g 1999 "$existing_gid_group" 2>/dev/null || groupdel "$existing_gid_group" 2>/dev/null || true; \
+    fi; \
+    \
+    # 如果 UID 999 被其他用户占用，删除或修改它
+    if [ -n "$existing_uid_user" ] && [ "$existing_uid_user" != "postgres" ]; then \
+        echo "UID 999 被用户 $existing_uid_user 占用，修改为 1999"; \
+        usermod -u 1999 "$existing_uid_user" 2>/dev/null || userdel "$existing_uid_user" 2>/dev/null || true; \
+    fi; \
+    \
+    # 创建 postgres 组和用户
+    groupadd -r postgres --gid=999; \
+    useradd -r -g postgres --uid=999 --home-dir=/var/lib/postgresql --shell=/bin/bash postgres; \
+    \
+    # 验证最终结果
+    echo "postgres 用户配置: UID=$(id -u postgres) GID=$(id -g postgres)"
 
-# 创建 PostgreSQL 数据目录
-RUN mkdir -p /var/lib/postgresql/data && chown -R postgres:postgres /var/lib/postgresql
+# 创建 PostgreSQL 数据目录和运行时目录
+RUN mkdir -p /var/lib/postgresql/data /var/run/postgresql && \
+    chown -R postgres:postgres /var/lib/postgresql /var/run/postgresql && \
+    chmod 2775 /var/run/postgresql
 
 # ===========================================
 # 安装 PostgreSQL 内置扩展包
