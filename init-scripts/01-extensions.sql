@@ -40,7 +40,8 @@ CREATE EXTENSION IF NOT EXISTS unaccent;
 -- ===========================================
 -- 7. 需要预加载的扩展（无依赖）
 -- ===========================================
-CREATE EXTENSION IF NOT EXISTS pg_duckdb;
+-- 注意：pg_duckdb 需要在 shared_preload_libraries 中配置，这里不创建
+-- CREATE EXTENSION IF NOT EXISTS pg_duckdb;
 
 -- ===========================================
 -- 8. 地理位置扩展（无依赖）
@@ -59,17 +60,23 @@ END $$;
 -- ===========================================
 -- 9. 时间序列扩展（容错处理）
 -- ===========================================
-DO $$
-BEGIN
-    BEGIN
-        CREATE EXTENSION IF NOT EXISTS timescaledb;
-        RAISE NOTICE 'timescaledb extension created successfully';
-    EXCEPTION
-        WHEN OTHERS THEN
-            RAISE NOTICE 'timescaledb extension not available: %', SQLERRM;
-    END;
-    
-END $$;
+-- 注意：timescaledb 需要在 shared_preload_libraries 中预加载
+-- 在初始化时不创建，避免服务器崩溃
+-- 用户可以在配置后手动创建：
+-- ALTER SYSTEM SET shared_preload_libraries = 'timescaledb';
+-- SELECT pg_reload_conf();
+-- CREATE EXTENSION timescaledb;
+-- DO $$
+-- BEGIN
+--     BEGIN
+--         CREATE EXTENSION IF NOT EXISTS timescaledb;
+--         RAISE NOTICE 'timescaledb extension created successfully';
+--     EXCEPTION
+--         WHEN OTHERS THEN
+--             RAISE NOTICE 'timescaledb extension not available: %', SQLERRM;
+--     END;
+--
+-- END $$;
 
 -- ===========================================
 -- 10. AI/向量基础扩展（容错处理）
@@ -102,22 +109,28 @@ END $$;
 -- ===========================================
 -- 12. AI/向量高级扩展（依赖 vector）
 -- ===========================================
-DO $$
-BEGIN
-    BEGIN
-        -- 检查 vchord 是否已在 shared_preload_libraries 中配置
-        IF EXISTS (SELECT 1 FROM pg_settings WHERE name = 'shared_preload_libraries' AND setting LIKE '%vchord%') THEN
-            CREATE EXTENSION IF NOT EXISTS vchord;
-            RAISE NOTICE 'vchord extension created successfully';
-        ELSE
-            RAISE NOTICE 'vchord extension not available: vchord must be loaded via shared_preload_libraries';
-        END IF;
-    EXCEPTION
-        WHEN OTHERS THEN
-            RAISE NOTICE 'vchord extension not available: %', SQLERRM;
-    END;
-    
-END $$;
+-- 注意：vchord 需要在 shared_preload_libraries 中预加载
+-- 在初始化时不创建，避免服务器崩溃
+-- 用户可以在配置后手动创建：
+-- ALTER SYSTEM SET shared_preload_libraries = 'vchord';
+-- SELECT pg_reload_conf();
+-- CREATE EXTENSION vchord;
+-- DO $$
+-- BEGIN
+--     BEGIN
+--         -- 检查 vchord 是否已在 shared_preload_libraries 中配置
+--         IF EXISTS (SELECT 1 FROM pg_settings WHERE name = 'shared_preload_libraries' AND setting LIKE '%vchord%') THEN
+--             CREATE EXTENSION IF NOT EXISTS vchord;
+--             RAISE NOTICE 'vchord extension created successfully';
+--         ELSE
+--             RAISE NOTICE 'vchord extension not available: vchord must be loaded via shared_preload_libraries';
+--         END IF;
+--     EXCEPTION
+--         WHEN OTHERS THEN
+--             RAISE NOTICE 'vchord extension not available: %', SQLERRM;
+--     END;
+--
+-- END $$;
 
 
 -- ===========================================
@@ -159,9 +172,11 @@ END $$;
 -- ===========================================
 -- 15. 分析能力扩展（无依赖）
 -- ===========================================
-CREATE EXTENSION IF NOT EXISTS pg_analytics;
+-- 注意：pg_analytics 在 Pigsty 仓库中不可用，已移除
+-- CREATE EXTENSION IF NOT EXISTS pg_analytics;
 CREATE EXTENSION IF NOT EXISTS pg_partman;
-CREATE EXTENSION IF NOT EXISTS pg_duckdb;
+-- pg_duckdb 需要预加载，在运行时配置中处理
+-- CREATE EXTENSION IF NOT EXISTS pg_duckdb;
 CREATE EXTENSION IF NOT EXISTS tablefunc;
 
 -- ===========================================

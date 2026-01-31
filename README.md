@@ -29,13 +29,13 @@
 
 ### 🚀 核心功能
 
-- **PostgreSQL 17**: 基于 Ubuntu 24.04 和 Pig 包管理器
+- **PostgreSQL 17**: 基于官方 postgres:17 镜像和 Pig 包管理器
 - **多架构支持**: 支持 2 种主要的 CPU 架构（基于 Pig 包管理器支持）
 - **中文数据处理**: 专门优化的中文分词、全文搜索和文本处理能力
 - **AI/向量支持**: 集成 pgvector、smlar 等向量搜索扩展，支持中文语义搜索
 - **时间序列**: 集成 TimescaleDB 时间序列数据库，支持中文标签和注释
 - **地理空间**: 集成 PostGIS 地理空间数据处理，支持中文地名和地址
-- **分析能力**: 集成 pg_analytics、pg_duckdb 等分析工具，支持中文数据分析
+- **分析能力**: 集成 pg_partman、tablefunc 等分析工具，支持中文数据分析
 - **扩展丰富**: 预装 20+ 个专业 PostgreSQL 扩展，全面支持中文应用场景
 - **容错构建**: 智能处理不同架构的包兼容性问题
 - **Pig 环境管理**: 使用 Pig 包管理器统一管理 PostgreSQL 内核和扩展
@@ -51,7 +51,7 @@
 - **AI/向量**: pgvector、smlar、vchord 等
 - **时间序列**: timescaledb
 - **地理空间**: postgis
-- **数据分析**: pg_analytics、pg_duckdb、tablefunc
+- **数据分析**: pg_partman、tablefunc
 - **功能增强**: pg_jsonschema、pg_graphql 等
 
 > 📖 **详细扩展说明**: 查看 [EXTENSIONS.md](EXTENSIONS.md) 了解所有扩展的详细功能、依赖关系和安装顺序。
@@ -82,6 +82,10 @@ services:
   postgres:
     image: eyeix/postgres-zh:v17
     container_name: postgres-zh
+services:
+  postgres:
+    image: eyeix/postgres-zh:v17
+    container_name: postgres-zh
     environment:
       POSTGRES_DB: zh-app
       POSTGRES_USER: postgres
@@ -89,12 +93,19 @@ services:
     ports:
       - "5432:5432"
     volumes:
+      # 推荐：使用命名卷
       - postgres_data:/var/lib/postgresql/data
+      # 或使用本地目录（现已完全支持，无需预设权限）
+      # - /path/to/data:/var/lib/postgresql/data
     restart: unless-stopped
 
 volumes:
   postgres_data:
 ```
+
+> 💡 **存储卷选择建议**：
+> - ✅ **命名卷**（推荐）：适用于所有环境，Docker 自动管理
+> - ✅ **本地目录**：现已完全支持，无需预先设置权限
 
 ### 多架构支持
 
