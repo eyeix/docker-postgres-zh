@@ -48,13 +48,89 @@ docker run -d \
   eyeix/postgres-zh:v17
 ```
 
-**无需预先设置权限**，官方 entrypoint 会自动处理。
+**支持的文件系统**：
+- ✅ ext4, xfs, btrfs 等本地文件系统
+- ✅ NFS（需要配置 `no_root_squash`）
+
+**不支持的文件系统**：
+- ❌ CIFS/SMB（无法执行 chmod/chown 操作）
 
 ---
 
 ## 常见问题
 
-### 问题 1：容器无法启动
+### 问题 1：网络文件系统权限错误
+
+**错误信息**：
+```
+chmod: changing permissions of '/var/lib/postgresql/data': Operation not permitted
+```
+
+**原因分析**：
+
+不同的网络文件系统协议对 POSIX 权限管理的支持程度不同：
+
+#### CIFS/SMB 协议的限制
+
+CIFS (Common Internet File System) 使用 Windows 的 ACL 权限模型，与 Linux 的 POSIX 权限模型不兼容：
+
+- ❌ **无法执行 chmod/chown**：Linux 客户端挂载 CIFS 时，这些命令会失败或被忽略
+- ❌ **静态权限映射**：即使设置了 `uid`/`gid` 挂载参数，也只是静态映射，无法动态修改
+- ❌ **不适合 PostgreSQL**：PostgreSQL 容器需要动态调整数据目录权限，CIFS 无法满足
+
+#### NFS 协议的支持
+
+NFS (Network File System) 原生支持 POSIX 权限模型：
+
+- ✅ **支持 chmod/chown**：客户端可以像本地文件系统一样管理权限
+- ✅ **动态权限管理**：容器可以正确设置 postgres 用户的文件权限
+- ⚠️ **需要正确配置**：服务端必须配置 `no_root_squash` 选项
+
+**NFS 配置示例**：
+
+在 NFS 服务端的 `/etc/exports` 文件中：
+
+```bash
+# 允许客户端的 root 用户保持 root 权限
+/path/to/nfs/share  192.168.1.0/24(rw,sync,no_root_squash,no_subtree_check)
+```
+
+配置说明：
+- `rw`: 读写权限
+- `sync`: 同步写入
+- `no_root_squash`: 允许客户端 root 用户保持 root 权限（关键配置）
+- `no_subtree_check`: 禁用子树检查以提高性能
+
+**解决方案**：
+
+1. **推荐方案：使用命名卷**（最简单、最可靠）
+
+```bash
+docker volume create postgres_data
+docker run -d -v postgres_data:/var/lib/postgresql/data eyeix/postgres-zh:v17
+```
+
+2. **使用本地文件系统**（ext4/xfs/btrfs）
+
+```bash
+docker run -d -v /path/to/local/data:/var/lib/postgresql/data eyeix/postgres-zh:v17
+```
+
+3. **使用 NFS**（需要服务端配置 no_root_squash）
+
+```bash
+# 在宿主机上挂载 NFS
+sudo mount -t nfs -o vers=4 nfs-server:/path/to/share /mnt/nfs
+
+# 运行容器
+docker run -d -v /mnt/nfs/postgres:/var/lib/postgresql/data eyeix/postgres-zh:v17
+```
+
+4. **避免使用 CIFS/SMB**
+
+如果必须使用网络存储，请选择 NFS 而不是 CIFS/SMB。
+
+### 问题 2：容器无法启动
 
 **检查日志**：
 ```bash

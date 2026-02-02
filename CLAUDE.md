@@ -87,7 +87,7 @@ docker exec -it postgres-zh pig ext search <extension_name>
 - `init-scripts/01-extensions.sql` - 数据库初始化脚本，启用所有扩展并配置中文分词
 - `.github/workflows/docker-build.yml` - CI/CD 配置，自动构建并推送到 Docker Hub
 - `README.md` - 项目文档，包含详细的使用说明和示例
-- `CHANGELOG.md` - Actions 自动进行的更新总结文档，由 Github Actions 管理
+- `CHANGELOG.md` - Actions 自动进行的更新总结文档，由 Github Actions 管理，而不应该被 AI 用于填写更新记录
 
 ### Pig 包管理器
 

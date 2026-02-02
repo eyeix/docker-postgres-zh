@@ -58,6 +58,12 @@
 
 ## 🚀 快速开始
 
+> ⚠️ **存储注意事项**：
+> - ✅ **推荐**：命名卷或本地文件系统（ext4/xfs/btrfs）
+> - ✅ **支持**：NFS（需要服务端配置 `no_root_squash`）
+> - ❌ **不支持**：CIFS/SMB（无法执行权限管理命令）
+> - 📖 详见 [网络文件系统说明](troubleshooting/TROUBLESHOOTING.md#问题-1网络文件系统权限错误)
+
 ### 使用 Docker 运行
 
 ```bash
@@ -548,6 +554,10 @@ docker run -d \
 **注意事项**：
 - 容器内 postgres 用户的 UID/GID 固定为 999:999
 - 如果使用目录挂载，容器会自动将目录所有者改为 999:999
+- **网络文件系统支持**：
+  - ✅ **NFS**：支持，但需要服务端配置 `no_root_squash`
+  - ❌ **CIFS/SMB**：不支持，因为无法执行 chmod/chown 操作
+  - 📖 详见 [网络文件系统权限说明](troubleshooting/TROUBLESHOOTING.md#问题-1网络文件系统权限错误)
 - 如果需要在宿主机上访问数据目录，可以：
   ```bash
   # 方法 1：将宿主机用户添加到 GID 999 的组
